@@ -18,6 +18,10 @@ package org.jkiss.dbeaver.model.ai.prompt;
 
 import org.jkiss.code.NotNull;
 import org.jkiss.dbeaver.model.ai.AIPromptGenerator;
+import org.jkiss.dbeaver.model.ai.AISettings;
+import org.jkiss.dbeaver.model.ai.registry.AIPromptGeneratorDescriptor;
+import org.jkiss.dbeaver.model.ai.registry.AIPromptGeneratorRegistry;
+import org.jkiss.dbeaver.model.ai.registry.AISettingsManager;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -61,6 +65,16 @@ public abstract class AIPromptAbstract implements AIPromptGenerator {
     @NotNull
     public final String build() {
         StringBuilder prompt = new StringBuilder();
+
+        AIPromptGeneratorDescriptor gd = AIPromptGeneratorRegistry.getInstance().getPromptGenerator(this.generatorId());
+        AISettings settings = AISettingsManager.getInstance().getSettings();
+        if (gd != null && settings.isFunctionsEnabled()) {
+            for (AIPromptGeneratorDescriptor.Uses use : gd.getUses()) {
+                if (settings.getEnabledFunctions().contains(use.function())) {
+                    this.addInstructions(use.instructions());
+                }
+            }
+        }
 
         if (!instructions.isEmpty()) {
             prompt.append("Instructions:\n");
