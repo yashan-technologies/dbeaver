@@ -138,21 +138,20 @@ public class AIAgentRegistry implements AIAgentManager {
 
     @Nullable
     @Override
-    public AIFunctionDescriptor getFunctionById(@NotNull String fullId) {
-        String functionId;
-        AIAgentDescriptor agent;
-        int divPos = fullId.indexOf(':');
-        if (divPos == -1) {
-            agent = internalAgent;
-            functionId = fullId;
-        } else {
-            agent = externalAgents.get(fullId.substring(0, divPos));
-            if (agent == null) {
-                return null;
+    public AIFunctionDescriptor getFunctionById(@NotNull String id) {
+        AIFunctionDescriptor function = internalAgent.getFunctionById(id);
+        if (function == null) {
+            for (AIAgent agent : externalAgents.values()) {
+                function = agent.getFunctionById(id);
+                if (function != null) {
+                    break;
+                }
             }
-            functionId = fullId.substring(divPos + 1);
         }
-        return agent.getFunctionById(functionId);
+        if (function == null) {
+            log.warn("AI function '" + id + "' not found in any accessible agent");
+        }
+        return function;
     }
 
     @NotNull

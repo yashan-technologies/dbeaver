@@ -38,7 +38,7 @@ public interface AIAgentManager {
     List<AIFunctionDescriptor> getAllFunctions(@NotNull AIFunctionPurpose purpose);
 
     @Nullable
-    AIFunctionDescriptor getFunctionById(@NotNull String fullId);
+    AIFunctionDescriptor getFunctionById(@NotNull String id);
 
     @NotNull
     List<AIFunctionCategoryDescriptor> getAllCategories();
