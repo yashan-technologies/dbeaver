@@ -14,32 +14,36 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.jkiss.dbeaver.ui.controls.resultset.panel.grouping.action;
+package org.jkiss.dbeaver.ui.controls.resultset.panel.grouping.column.impl;
 
-import org.eclipse.jface.action.Action;
-import org.eclipse.jface.resource.ImageDescriptor;
 import org.jkiss.code.NotNull;
-import org.jkiss.code.Nullable;
+import org.jkiss.dbeaver.model.DBPDataSource;
 import org.jkiss.dbeaver.ui.controls.resultset.panel.grouping.GroupingResultsContainer;
+import org.jkiss.dbeaver.ui.controls.resultset.panel.grouping.column.GroupingFunctionColumn;
 
-public abstract class GroupingAction extends Action {
+public abstract class BasicGroupingFunctionColumn implements GroupingFunctionColumn {
+
     protected final GroupingResultsContainer groupingResultsContainer;
 
-    public GroupingAction(
-        @NotNull GroupingResultsContainer groupingResultsContainer,
-        @Nullable String text,
-        @NotNull ImageDescriptor image
+    protected final DBPDataSource dataSource;
+
+    public BasicGroupingFunctionColumn(
+        @NotNull DBPDataSource dataSource,
+        @NotNull GroupingResultsContainer groupingResultsContainer
     ) {
-        super(text, image);
+        this.dataSource = dataSource;
         this.groupingResultsContainer = groupingResultsContainer;
     }
 
-    public GroupingAction(
-        @NotNull GroupingResultsContainer groupingResultsContainer,
-        @Nullable String text,
-        int style
-    ) {
-        super(text, style);
-        this.groupingResultsContainer = groupingResultsContainer;
+    @Override
+    public boolean afterDeleteAction() {
+        groupingResultsContainer.resetDataFilters();
+        return true;
     }
+
+    @Override
+    public boolean isShowToUser() {
+        return true;
+    }
+
 }
