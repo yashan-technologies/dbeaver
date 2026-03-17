@@ -14,33 +14,20 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.jkiss.dbeaver.ui.forms;
+package org.jkiss.dbeaver.ui.app.devtools.handlers;
 
-import org.eclipse.core.databinding.observable.value.IObservableValue;
-import org.eclipse.core.databinding.observable.value.WritableValue;
+import org.eclipse.core.commands.AbstractHandler;
+import org.eclipse.core.commands.ExecutionEvent;
+import org.eclipse.ui.handlers.HandlerUtil;
 import org.jkiss.code.NotNull;
 import org.jkiss.code.Nullable;
+import org.jkiss.dbeaver.ui.app.devtools.ui.ColorsDialog;
 
-@SuppressWarnings("CheckStyle")
-record UIObservableImpl<T>(@NotNull IObservableValue<T> delegate, @NotNull Class<T> type) implements UIObservable<T> {
-    @NotNull
-    static <T> UIObservableImpl<T> of(@Nullable T value, @NotNull Class<T> type) {
-        return new UIObservableImpl<>(new WritableValue<>(value, type), type);
-    }
-
+public class ShowColorsHandler extends AbstractHandler {
+    @Nullable
     @Override
-    public T get() {
-        return delegate.getValue();
-    }
-
-    @Override
-    public void set(T value) {
-        delegate.setValue(value);
-    }
-
-    @NotNull
-    @Override
-    public Class<T> type() {
-        return type;
+    public Object execute(@NotNull ExecutionEvent event) {
+        new ColorsDialog(HandlerUtil.getActiveShell(event)).open();
+        return null;
     }
 }
