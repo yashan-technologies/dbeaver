@@ -96,7 +96,7 @@ public class PropertySerializationUtils {
         @NotNull Map<String, ?> properties
     ) {
         PropertySourceEditable editable = new PropertySourceEditable(object, object);
-        editable.collectProperties(false);
+        editable.collectProperties();
         for (Map.Entry<String, ?> entry : properties.entrySet()) {
             String propId = entry.getKey();
             Object propValue = entry.getValue();

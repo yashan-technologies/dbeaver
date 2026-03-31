@@ -190,9 +190,7 @@ public class AIPreferencePageEngines extends AbstractPrefPage implements IWorkbe
             AIIObjectPropertyConfigurator<AIEngineDescriptor, AIEngineProperties> engineConfigurator
                 = createEngineConfigurator();
             if (engineConfigurator == null) {
-                DBWorkbench.getPlatformUI()
-                    .showError("Configurator not found", "Engine configurator not found for " + completionEngine.getId());
-                return;
+                log.error("Engine configurator not found for " + completionEngine.getId());
             }
             activeEngineConfiguratorPage = new EngineConfiguratorPage(engineConfigurator);
             activeEngineConfiguratorPage.createControl(engineGroup, completionEngine);

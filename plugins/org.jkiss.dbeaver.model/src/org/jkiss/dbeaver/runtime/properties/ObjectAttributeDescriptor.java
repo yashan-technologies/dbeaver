@@ -1,6 +1,6 @@
 /*
  * DBeaver - Universal Database Manager
- * Copyright (C) 2010-2026 DBeaver Corp and others
+ * Copyright (C) 2010-2025 DBeaver Corp and others
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -192,19 +192,8 @@ public abstract class ObjectAttributeDescriptor {
         IPropertyFilter filter,
         @Nullable String locale
     ) {
-        return extractAnnotations(source, theClass, filter, locale, true);
-    }
-
-    @NotNull
-    public static List<ObjectPropertyDescriptor> extractAnnotations(
-        @Nullable DBPPropertySource source,
-        Class<?> theClass,
-        IPropertyFilter filter,
-        @Nullable String locale,
-        boolean collectLocalizedNames
-    ) {
         List<ObjectPropertyDescriptor> annoProps = new ArrayList<ObjectPropertyDescriptor>();
-        extractAnnotations(source, null, theClass, annoProps, filter, locale,  collectLocalizedNames);
+        extractAnnotations(source, null, theClass, annoProps, filter, locale);
         return annoProps;
     }
 
@@ -227,9 +216,8 @@ public abstract class ObjectAttributeDescriptor {
         Class<?> theClass,
         List<ObjectPropertyDescriptor> annoProps,
         IPropertyFilter filter,
-        @Nullable String locale,
-        boolean collectLocalizedNames
-    ) {
+        @Nullable String locale)
+    {
         Object object = source == null ? null : source.getEditableValue();
         Method[] methods = theClass.getMethods();
         Map<String, Method> passedNames = new HashMap<>();
@@ -256,7 +244,7 @@ public abstract class ObjectAttributeDescriptor {
                     continue;
                 }
                 // Single property
-                ObjectPropertyDescriptor desc = new ObjectPropertyDescriptor(source, parent, propInfo, method, locale, collectLocalizedNames);
+                ObjectPropertyDescriptor desc = new ObjectPropertyDescriptor(source, parent, propInfo, method, locale);
                 if (filter != null && !filter.select(object, desc)) {
                     continue;
                 }
@@ -270,7 +258,6 @@ public abstract class ObjectAttributeDescriptor {
             }
         }
         annoProps.sort(ATTRIBUTE_DESCRIPTOR_COMPARATOR);
-
     }
 
 }
