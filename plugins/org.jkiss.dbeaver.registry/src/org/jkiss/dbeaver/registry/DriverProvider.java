@@ -14,18 +14,20 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.jkiss.dbeaver.model.secret;
+
+package org.jkiss.dbeaver.registry;
 
 import org.jkiss.code.NotNull;
-import org.jkiss.dbeaver.DBException;
+import org.jkiss.dbeaver.registry.driver.DriverDescriptor;
+
+import java.util.List;
 
 /**
- * DBPSecretHolder
+ * Driver provider
  */
-public interface DBPSecretHolder {
+public interface DriverProvider {
 
-    void persistSecrets(@NotNull DBSSecretController secretController) throws DBException;
-
-    void resolveSecrets(@NotNull DBSSecretController secretController) throws DBException;
+    @NotNull
+    List<DriverDescriptor> getProvidedDrivers(@NotNull DataSourceProviderDescriptor dataSourceProvider);
 
 }

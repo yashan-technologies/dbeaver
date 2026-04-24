@@ -14,18 +14,22 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.jkiss.dbeaver.model.secret;
+
+package org.jkiss.dbeaver.model.connection;
 
 import org.jkiss.code.NotNull;
-import org.jkiss.dbeaver.DBException;
 
 /**
- * DBPSecretHolder
+ * Driver license.
+ * If driver requires a commercial license then this cla
  */
-public interface DBPSecretHolder {
+public interface DBPDriverLicense {
 
-    void persistSecrets(@NotNull DBSSecretController secretController) throws DBException;
+    @NotNull
+    String getLicenseId();
 
-    void resolveSecrets(@NotNull DBSSecretController secretController) throws DBException;
+    boolean isValidLicense();
+
+    boolean isTrialLicense();
 
 }

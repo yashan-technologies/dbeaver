@@ -14,18 +14,31 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.jkiss.dbeaver.model.secret;
+package org.jkiss.dbeaver.model;
 
 import org.jkiss.code.NotNull;
-import org.jkiss.dbeaver.DBException;
+import org.jkiss.code.Nullable;
 
 /**
- * DBPSecretHolder
+ * Configuration element
  */
-public interface DBPSecretHolder {
+public interface DBPConfigurationElement {
 
-    void persistSecrets(@NotNull DBSSecretController secretController) throws DBException;
+    @NotNull
+    String getName();
+    @Nullable
+    String getValue();
 
-    void resolveSecrets(@NotNull DBSSecretController secretController) throws DBException;
+    @Nullable
+    String getAttribute(@NotNull String name);
+
+    @NotNull
+    DBPConfigurationElement[] getChildren();
+
+    @NotNull
+    DBPConfigurationElement[] getChildren(@NotNull String name);
+
+    @NotNull
+    String getContributorName();
 
 }

@@ -14,18 +14,16 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.jkiss.dbeaver.model.secret;
+package org.jkiss.dbeaver.model.connection;
 
 import org.jkiss.code.NotNull;
-import org.jkiss.dbeaver.DBException;
 
 /**
- * DBPSecretHolder
+ * Driver stub. Just describes/advertises the driver which exists in another product edition.
  */
-public interface DBPSecretHolder {
-
-    void persistSecrets(@NotNull DBSSecretController secretController) throws DBException;
-
-    void resolveSecrets(@NotNull DBSSecretController secretController) throws DBException;
-
+public record DBPDriverStub(
+    @NotNull String nonAvailabilityTitle,
+    @NotNull String nonAvailabilityDescription,
+    @NotNull String nonAvailabilityReason
+) {
 }

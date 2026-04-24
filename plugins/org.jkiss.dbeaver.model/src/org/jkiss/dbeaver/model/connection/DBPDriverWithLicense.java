@@ -14,18 +14,35 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.jkiss.dbeaver.model.secret;
+
+package org.jkiss.dbeaver.model.connection;
 
 import org.jkiss.code.NotNull;
+import org.jkiss.code.Nullable;
 import org.jkiss.dbeaver.DBException;
+import org.jkiss.dbeaver.model.runtime.DBRProgressMonitor;
 
 /**
- * DBPSecretHolder
+ * If driver requires a commercial license then this class is implemented by DBPDriver
+ * and provides information about license details.
  */
-public interface DBPSecretHolder {
+public interface DBPDriverWithLicense {
 
-    void persistSecrets(@NotNull DBSSecretController secretController) throws DBException;
+    @NotNull
+    String getVendorName();
 
-    void resolveSecrets(@NotNull DBSSecretController secretController) throws DBException;
+    @NotNull
+    String getVendorURL();
+
+    @NotNull
+    String getDriverPurchaseURL();
+
+    @Nullable
+    DBPDriverLicense getCurrentLicense() throws DBException;
+
+    boolean supportsTrialLicense();
+
+    @NotNull
+    DBPDriverLicense requestTrialLicense(@NotNull DBRProgressMonitor monitor) throws DBException;
 
 }
