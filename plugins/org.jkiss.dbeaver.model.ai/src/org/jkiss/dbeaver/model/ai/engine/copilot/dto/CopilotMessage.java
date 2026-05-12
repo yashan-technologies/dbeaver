@@ -34,7 +34,7 @@ public record CopilotMessage(
     @Nullable String content,
     @Nullable
     @SerializedName("tool_calls")
-    List<CopilotChatResponseLegacy.ToolCall> toolCalls,
+    List<CopilotChatResponse.ToolCall> toolCalls,
     @Nullable
     @SerializedName("tool_call_id")
     String toolCallId
@@ -55,11 +55,11 @@ public record CopilotMessage(
                 result.add(new CopilotMessage(
                     ASSISTANT_ROLE,
                     null,
-                    List.of(new CopilotChatResponseLegacy.ToolCall(
+                    List.of(new CopilotChatResponse.ToolCall(
                         0,
                         callId,
                         "function",
-                        new CopilotChatResponseLegacy.Function(
+                        new CopilotChatResponse.Function(
                             functionCall.getFunctionName(),
                             JSONUtils.GSON.toJson(functionCall.getArguments())
                         )

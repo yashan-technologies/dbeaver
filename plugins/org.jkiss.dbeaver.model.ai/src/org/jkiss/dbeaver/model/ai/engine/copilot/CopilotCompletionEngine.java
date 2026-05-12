@@ -17,38 +17,35 @@
 package org.jkiss.dbeaver.model.ai.engine.copilot;
 
 import org.jkiss.code.NotNull;
+import org.jkiss.code.Nullable;
 import org.jkiss.dbeaver.DBException;
-import org.jkiss.dbeaver.model.ai.AIFunctionCall;
 import org.jkiss.dbeaver.model.ai.AIMessage;
 import org.jkiss.dbeaver.model.ai.AIMessageType;
 import org.jkiss.dbeaver.model.ai.AIUsage;
 import org.jkiss.dbeaver.model.ai.engine.*;
 import org.jkiss.dbeaver.model.ai.engine.copilot.dto.*;
 import org.jkiss.dbeaver.model.ai.engine.openai.OpenAIConstants;
-import org.jkiss.dbeaver.model.ai.engine.openai.OpenAiUtils;
-import org.jkiss.dbeaver.model.ai.engine.openai.dto.OAIMessage;
-import org.jkiss.dbeaver.model.ai.engine.openai.dto.OAIResponsesResponse;
 import org.jkiss.dbeaver.model.ai.engine.openai.dto.OAITool;
 import org.jkiss.dbeaver.model.ai.internal.AIMessages;
 import org.jkiss.dbeaver.model.ai.utils.DisposableLazyValue;
 import org.jkiss.dbeaver.model.runtime.DBRProgressMonitor;
 import org.jkiss.utils.CommonUtils;
 
-import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 import java.util.Set;
 
 public class CopilotCompletionEngine<P extends CopilotProperties> extends BaseCompletionEngine<P> {
 
-    protected final DisposableLazyValue<CopilotClientResponses, DBException> client = new DisposableLazyValue<>() {
+    protected final DisposableLazyValue<CopilotClient, DBException> client = new DisposableLazyValue<>() {
         @NotNull
         @Override
-        protected CopilotClientResponses initialize() throws DBException {
+        protected CopilotClient initialize() throws DBException {
             return createClient(getProperties().getBaseAuthUrl());
         }
 
         @Override
-        protected void onDispose(@NotNull CopilotClientResponses disposedValue) {
+        protected void onDispose(@NotNull CopilotClient disposedValue) {
             disposedValue.close();
         }
     };
@@ -61,13 +58,11 @@ public class CopilotCompletionEngine<P extends CopilotProperties> extends BaseCo
     @NotNull
     @Override
     public List<AIModel> getModels(@NotNull DBRProgressMonitor monitor) throws DBException {
-        List<CopilotModel> copilotModels = client.getInstance().loadModels(monitor, requestSessionToken(monitor).token());
-        List<AIModel> list = new ArrayList<>();
-        for (CopilotModel model : copilotModels) {
-            AIModel aiModel = new AIModel(model.id(), null, Set.of(AIModelFeature.CHAT));
-            list.add(aiModel);
-        }
-        return list;
+        return client.getInstance().loadModels(monitor, requestSessionToken(monitor).token()).stream()
+            .map(model -> CopilotModels.getModelByName(model.id()).orElse(
+                new AIModel(model.id(), null, Set.of())
+            ))
+            .toList();
     }
 
     @NotNull
@@ -76,11 +71,10 @@ public class CopilotCompletionEngine<P extends CopilotProperties> extends BaseCo
         @NotNull DBRProgressMonitor monitor,
         @NotNull AIEngineRequest request
     ) throws DBException {
-        OAIResponsesResponse chatResponse = client.getInstance().chat(
+        CopilotChatResponse chatResponse = client.getInstance().chat(
             monitor,
             requestSessionToken(monitor).token(),
-            createLegacyChatRequest(request, false),
-            OpenAiUtils.createOpenAiRequest(request, getModelName(), getProperties().getTemperature())
+            createChatRequest(request, false)
         );
 
         return toEngineResponse(chatResponse);
@@ -95,8 +89,7 @@ public class CopilotCompletionEngine<P extends CopilotProperties> extends BaseCo
         client.getInstance().createChatCompletionStream(
             monitor,
             requestSessionToken(monitor).token(),
-            OpenAiUtils.createOpenAiRequest(request, getModelName(), null),
-            createLegacyChatRequest(request, true),
+            createChatRequest(request, true),
             listener
         );
     }
@@ -131,8 +124,7 @@ public class CopilotCompletionEngine<P extends CopilotProperties> extends BaseCo
         return sessionToken;
     }
 
-    @NotNull
-    public String getModelName() {
+    public String getModelName() throws DBException {
         return CommonUtils.toString(
             properties.getModel(),
             OpenAIConstants.DEFAULT_MODEL
@@ -140,10 +132,10 @@ public class CopilotCompletionEngine<P extends CopilotProperties> extends BaseCo
     }
 
     @NotNull
-    private CopilotChatRequest createLegacyChatRequest(
+    private CopilotChatRequest createChatRequest(
         @NotNull AIEngineRequest request,
         boolean stream
-    ) {
+    ) throws DBException {
         return CopilotChatRequest.builder()
             .withModel(getModelName())
             .withMessages(toCopilotMessages(request.getMessages()))
@@ -159,31 +151,36 @@ public class CopilotCompletionEngine<P extends CopilotProperties> extends BaseCo
             .build();
     }
 
-
     @NotNull
-    private AIEngineResponse toEngineResponse(@NotNull OAIResponsesResponse response) throws DBException {
-        List<OAIMessage> messages = response.output.stream()
-            .filter(msg -> !OAIMessage.TYPE_FUNCTION_REASONING.equals(msg.type))
-            .toList();
+    private AIEngineResponse toEngineResponse(@NotNull CopilotChatResponse response) throws DBException {
         AIUsage usage = response.getAIUsage();
-        if (messages.isEmpty()) {
-            return new AIEngineResponse(
-                AIMessageType.ASSISTANT,
-                List.of(AIMessages.ai_empty_engine_response),
-                usage
-            );
+        CopilotChatResponse.ToolCall toolCall = getFirstToolCall(response);
+        if (toolCall != null) {
+            return new AIEngineResponse(CopilotUtils.createFunctionCall(toolCall), usage);
         }
-        OAIMessage message = messages.getFirst();
-        if (OAIMessage.TYPE_FUNCTION_CALL.equals(message.type)) {
-            AIFunctionCall fc = OpenAiUtils.createFunctionCall(message);
-            return new AIEngineResponse(fc, usage);
-        } else {
-            List<String> choices = messages.stream()
-                .map(OAIMessage::getFullText)
-                .toList();
 
-            return new AIEngineResponse(AIMessageType.ASSISTANT, choices, usage);
+        List<String> variants = response.choices().stream()
+            .map(CopilotChatResponse.Choice::message)
+            .map(CopilotChatResponse.Message::content)
+            .filter(CommonUtils::isNotEmpty)
+            .toList();
+        if (variants.isEmpty()) {
+            variants = List.of(AIMessages.ai_empty_engine_response);
         }
+
+        return new AIEngineResponse(AIMessageType.ASSISTANT, variants, usage);
+    }
+
+    @Nullable
+    private static CopilotChatResponse.ToolCall getFirstToolCall(@NotNull CopilotChatResponse response) {
+        return response.choices().stream()
+            .map(CopilotChatResponse.Choice::message)
+            .filter(Objects::nonNull)
+            .map(CopilotChatResponse.Message::toolCalls)
+            .filter(calls -> calls != null && !calls.isEmpty())
+            .map(List::getFirst)
+            .findFirst()
+            .orElse(null);
     }
 
     @NotNull
@@ -194,12 +191,12 @@ public class CopilotCompletionEngine<P extends CopilotProperties> extends BaseCo
     }
 
     @NotNull
-    protected CopilotClientResponses createClient(@NotNull String baseAuthUrl) throws DBException {
+    protected CopilotClient createClient(@NotNull String baseAuthUrl) throws DBException {
         String token = properties.getToken();
         if (token == null || token.isEmpty()) {
             throw new DBException("Copilot API token is not set");
         }
 
-        return new CopilotClientResponses(baseAuthUrl);
+        return new CopilotClient(baseAuthUrl);
     }
 }
