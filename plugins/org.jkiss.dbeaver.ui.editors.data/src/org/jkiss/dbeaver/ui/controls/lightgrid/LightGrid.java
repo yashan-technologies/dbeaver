@@ -149,8 +149,8 @@ public abstract class LightGrid extends Canvas {
 
         @Override
         public boolean equals(Object obj) {
-            return obj instanceof RowLocation &&
-                Arrays.equals(this.location, ((RowLocation)obj).location);
+            return obj instanceof RowLocation rowLocation &&
+                Arrays.equals(this.location, rowLocation.location);
         }
 
         @Override
@@ -2242,13 +2242,11 @@ public abstract class LightGrid extends Canvas {
         gc.setBackground(getBackground());
         int redrawRow = -1;
         GridColumn redrawColumn = null;
-        if (e.data instanceof RedrawCell redrawCell) {
-            redrawRow = redrawCell.row;
-            redrawColumn = redrawCell.column;
+        if (e.data instanceof RedrawCell(int row, GridColumn column)) {
+            redrawRow = row;
+            redrawColumn = column;
         }
         boolean isSingleCellPaint = redrawRow >= 0 || redrawColumn != null;
-
-        //this.drawBackground(gc, 0, 0, getSize().x, getSize().y);
 
         if (scrollValuesObsolete) {
             updateScrollbars();
