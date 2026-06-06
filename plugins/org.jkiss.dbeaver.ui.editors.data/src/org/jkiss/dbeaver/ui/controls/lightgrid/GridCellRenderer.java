@@ -427,11 +427,6 @@ public class GridCellRenderer extends AbstractRenderer {
         if (CommonUtils.isEmpty(cellHints)) {
             return;
         }
-        IGridController gridController = grid.getGridController();
-        if (gridController == null) {
-            log.error("No grid controller");
-            return;
-        }
         Point cellOrigin = grid.getOrigin(column, row.getVisualPosition());
         int iconsWidth = 0;
         for (IGridHint hint : cellHints) {
@@ -440,7 +435,7 @@ public class GridCellRenderer extends AbstractRenderer {
                 Image hintImage = DBeaverIcons.getImage(hintIcon);
                 Rectangle iconSize = hintImage.getBounds();
                 if (x >= cellOrigin.x + column.getWidth() - 4 - iconsWidth - iconSize.width) {
-                    hint.performAction(gridController, grid.toDisplay(x, y), state);
+                    hint.performAction(grid.getGridController(), grid.toDisplay(x, y), state);
                     return;
                 }
             }

@@ -176,7 +176,7 @@ public abstract class LightGrid extends Canvas {
      * OS's paint event merging to assure that we don't perform this expensive
      * operation when unnecessary.
      */
-    private boolean scrollValuesObsolete = false;
+    private boolean scrollValuesObsolete;
 
     /**
      * Reference to the item in focus.
@@ -484,7 +484,7 @@ public abstract class LightGrid extends Canvas {
     @NotNull
     public abstract IGridLabelProvider getLabelProvider();
 
-    @Nullable
+    @NotNull
     public abstract IGridController getGridController();
 
     public GridCellRenderer getCellRenderer() {
@@ -854,31 +854,12 @@ public abstract class LightGrid extends Canvas {
         getContentProvider().resetColors();
     }
 
-    /**
-     * Adds the listener to the collection of listeners who will be notified
-     * when the receiver's selection changes, by sending it one of the messages
-     * defined in the {@code SelectionListener} interface.
-     * <p/>
-     * Cell selection events may have <code>Event.detail = SWT.DRAG</code> when the
-     * user is drag selecting multiple cells.  A follow up selection event will be generated
-     * when the drag is complete.
-     *
-     * @param listener the listener which should be notified
-     */
     public void addSelectionListener(@NotNull SelectionListener listener) {
         checkWidget();
         addListener(SWT.Selection, event -> listener.widgetSelected(new SelectionEvent(event)));
         addListener(SWT.DefaultSelection, event -> listener.widgetDefaultSelected(new SelectionEvent(event)));
     }
 
-    /**
-     * Removes the listener from the collection of listeners who will be
-     * notified when the receiver's selection changes.
-     *
-     * @param listener the listener which should no longer be notified
-     * @see SelectionListener
-     * @see #addSelectionListener(SelectionListener)
-     */
     public void removeSelectionListener(@NotNull SelectionListener listener) {
         checkWidget();
         removeListener(SWT.Selection, listener);
@@ -947,10 +928,6 @@ public abstract class LightGrid extends Canvas {
     @Nullable
     private GridColumn getColumn(@NotNull Point point) {
         checkWidget();
-        if (point == null) {
-            SWT.error(SWT.ERROR_NULL_ARGUMENT);
-            return null;
-        }
 
         int x2 = 0;
 
@@ -1083,26 +1060,11 @@ public abstract class LightGrid extends Canvas {
 
     /**
      * Returns the default height of the items
-     *
-     * @return default height of items
-     * @see #setItemHeight(int)
      */
     public int getItemHeight() {
         return itemHeight;
     }
 
-    /**
-     * Sets the default height for this <code>Grid</code>'s items.  When
-     * this method is called, all existing items are resized
-     * to the specified height and items created afterwards will be
-     * initially sized to this height.
-     * <p/>
-     * As long as no default height was set by the client through this method,
-     * the preferred height of the first item in this <code>Grid</code> is
-     * used as a default for all items (and is returned by {@link #getItemHeight()}).
-     *
-     * @param height default height in pixels
-     */
     private void setItemHeight(int height) {
         checkWidget();
         if (height < 1)
@@ -3195,7 +3157,7 @@ public abstract class LightGrid extends Canvas {
                     }
 
                     if (!altPressed) {
-                        selectionEvent = updateCellSelection(new GridPos(col.getIndex(), row), e.stateMask, false, true, EventSource.MOUSE);
+                        updateCellSelection(new GridPos(col.getIndex(), row), e.stateMask, false, true, EventSource.MOUSE);
                     }
                     // Trigger selection event always!
                     // It makes sense if grid content was changed but selection remains the same
@@ -4036,10 +3998,6 @@ public abstract class LightGrid extends Canvas {
 
             int currIndex = getTopIndex();
 
-            if (item == -1) {
-                SWT.error(SWT.ERROR_INVALID_ARGUMENT);
-            }
-
             while (currIndex != item) {
                 if (currIndex < item) {
                     y += getItemHeight() + 1;
@@ -4604,6 +4562,9 @@ public abstract class LightGrid extends Canvas {
         }
         IGridRow gridRow = gridRows[row];
         String toolTip = getContentProvider().getCellToolTip(col, gridRow);
+        if (toolTip == null) {
+            return null;
+        }
         if (toolTip.length() > MAX_TOOLTIP_LENGTH) {
             toolTip = toolTip.substring(0, MAX_TOOLTIP_LENGTH) + "...";
         }
@@ -4850,7 +4811,7 @@ public abstract class LightGrid extends Canvas {
                             for (int i = 0; i < columns.size(); i++) {
                                 GridColumn column = columns.get(i);
                                 Object cellText = getContentProvider().
-                                    getCellValue(column, getRow(row), true);
+                                    getCellValue(column, gridRows[row], true);
 
                                 if (i > 0) text.append(", ");
                                 text.append(cellText);
@@ -4876,32 +4837,27 @@ public abstract class LightGrid extends Canvas {
         dropTarget.setTransfer(GridColumnTransfer.INSTANCE, TextTransfer.getInstance());
         dropTarget.addDropListener(new DropTargetListener() {
             @Override
-            public void dragEnter(DropTargetEvent event)
-            {
+            public void dragEnter(DropTargetEvent event) {
                 handleDragEvent(event);
             }
 
             @Override
-            public void dragLeave(DropTargetEvent event)
-            {
+            public void dragLeave(DropTargetEvent event) {
                 handleDragEvent(event);
             }
 
             @Override
-            public void dragOperationChanged(DropTargetEvent event)
-            {
+            public void dragOperationChanged(DropTargetEvent event) {
                 handleDragEvent(event);
             }
 
             @Override
-            public void dragOver(DropTargetEvent event)
-            {
+            public void dragOver(DropTargetEvent event) {
                 handleDragEvent(event);
             }
 
             @Override
-            public void drop(DropTargetEvent event)
-            {
+            public void drop(DropTargetEvent event) {
                 handleDragEvent(event);
                 if (event.detail == DND.DROP_MOVE) {
                     moveColumns(event);
@@ -4909,13 +4865,11 @@ public abstract class LightGrid extends Canvas {
             }
 
             @Override
-            public void dropAccept(DropTargetEvent event)
-            {
+            public void dropAccept(DropTargetEvent event) {
                 handleDragEvent(event);
             }
 
-            private void handleDragEvent(DropTargetEvent event)
-            {
+            private void handleDragEvent(DropTargetEvent event) {
                 if (!isDropSupported(event)) {
                     event.detail = DND.DROP_NONE;
                 } else {
@@ -4941,25 +4895,22 @@ public abstract class LightGrid extends Canvas {
                 return getColumn(dragPoint);
             }
 
-            private void moveColumns(DropTargetEvent event)
-            {
+            private void moveColumns(DropTargetEvent event) {
                 GridColumn overColumn = getOverColumn(event);
                 if (overColumn == null || draggingColumn == null || draggingColumn == overColumn) {
                     return;
                 }
-                IGridController gridController = getGridController();
-                if (gridController != null) {
-                    IGridController.DropLocation location;// = IGridController.DropLocation.SWAP;
+                IGridController.DropLocation location;// = IGridController.DropLocation.SWAP;
 
-                    Point dropPoint = getDisplay().map(null, LightGrid.this, new Point(event.x, event.y));
-                    Rectangle columnBounds = overColumn.getBounds();
-                    if (dropPoint.x > columnBounds.x + columnBounds.width / 2) {
-                        location = IGridController.DropLocation.DROP_AFTER;
-                    } else {
-                        location = IGridController.DropLocation.DROP_BEFORE;
-                    }
-                    gridController.moveColumn(draggingColumn.getElement(), overColumn.getElement(), location);
+                Point dropPoint = getDisplay().map(null, LightGrid.this, new Point(event.x, event.y));
+                Rectangle columnBounds = overColumn.getBounds();
+                if (dropPoint.x > columnBounds.x + columnBounds.width / 2) {
+                    location = IGridController.DropLocation.DROP_AFTER;
+                } else {
+                    location = IGridController.DropLocation.DROP_BEFORE;
                 }
+                getGridController().moveColumn(draggingColumn.getElement(), overColumn.getElement(), location);
+
                 draggingColumn = null;
             }
         });
