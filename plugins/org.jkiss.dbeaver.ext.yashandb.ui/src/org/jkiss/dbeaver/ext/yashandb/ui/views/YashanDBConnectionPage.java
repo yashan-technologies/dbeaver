@@ -1,6 +1,6 @@
 /*
  * DBeaver - Universal Database Manager
- * Copyright (C) 2010-2025 DBeaver Corp and others
+ * Copyright (C) 2010-2026 DBeaver Corp and others
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -22,28 +22,31 @@ import org.jkiss.dbeaver.ext.generic.views.GenericConnectionPage;
 import org.jkiss.dbeaver.ui.UIUtils;
 import org.jkiss.dbeaver.ui.dialogs.connection.DriverPropertiesDialogPage;
 
+/**
+ * YashanDBConnectionPage
+ */
 public class YashanDBConnectionPage extends GenericConnectionPage {
 
-	private final Image logoImage;
+    private final Image logoImage;
 
-	public YashanDBConnectionPage() {
-		logoImage = createImage("icons/yashandb_icon.png");
-	}
+    public YashanDBConnectionPage() {
+        logoImage = createImage("icons/yashandb_icon.png");
+    }
 
-	@Override
-	public void dispose() {
-		super.dispose();
-		UIUtils.dispose(logoImage);
-	}
+    @Override
+    public void dispose() {
+        super.dispose();
+        UIUtils.dispose(logoImage);
+    }
 
-	@Override
-	public Image getImage() {
-		return logoImage;
-	}
+    @Override
+    public Image getImage() {
+        return logoImage;
+    }
 
-	@Override
-	public IDialogPage[] getDialogPages(boolean extrasOnly, boolean forceCreate) {
-		return new IDialogPage[] {
-				new DriverPropertiesDialogPage(this) };
-	}
+    @Override
+    public IDialogPage[] getDialogPages(boolean extrasOnly, boolean forceCreate) {
+        return new IDialogPage[] {
+            new DriverPropertiesDialogPage(this)};
+    }
 }

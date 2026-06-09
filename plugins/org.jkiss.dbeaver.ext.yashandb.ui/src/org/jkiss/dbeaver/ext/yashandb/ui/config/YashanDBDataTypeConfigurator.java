@@ -1,6 +1,6 @@
 /*
  * DBeaver - Universal Database Manager
- * Copyright (C) 2010-2025 DBeaver Corp and others
+ * Copyright (C) 2010-2026 DBeaver Corp and others
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,6 +16,7 @@
  */
 package org.jkiss.dbeaver.ext.yashandb.ui.config;
 
+import org.jkiss.code.NotNull;
 import org.jkiss.code.Nullable;
 import org.jkiss.dbeaver.ext.yashandb.model.YashanDBDataType;
 import org.jkiss.dbeaver.model.edit.DBECommandContext;
@@ -27,20 +28,26 @@ import org.jkiss.dbeaver.ui.editors.object.struct.EntityEditPage;
 
 import java.util.Map;
 
+
+/**
+ * YashanDBDataTypeConfigurator
+ */
 public class YashanDBDataTypeConfigurator implements DBEObjectConfigurator<YashanDBDataType> {
 
-	@Override
-	public YashanDBDataType configureObject(@Nullable DBRProgressMonitor monitor,
-			@Nullable DBECommandContext commandContext, @Nullable Object container, @Nullable YashanDBDataType dataType,
-			@Nullable Map<String, Object> options) {
-		return UITask.run(() -> {
-			EntityEditPage editPage = new EntityEditPage(dataType.getDataSource(), DBSEntityType.TYPE);
-			if (!editPage.edit()) {
-				return null;
-			}
-			dataType.setName(editPage.getEntityName());
-			dataType.setObjectDefinitionText("TYPE " + dataType.getName() + " AS OBJECT\n" + "(\n" + ")");
-			return dataType;
-		});
-	}
+    @Override
+    public YashanDBDataType configureObject(@NotNull DBRProgressMonitor monitor,
+                                            @Nullable DBECommandContext commandContext, @Nullable Object container,
+                                            @NotNull YashanDBDataType dataType,
+                                            @NotNull Map<String, Object> options) {
+        return UITask.run(() -> {
+            EntityEditPage editPage = new EntityEditPage(dataType.getDataSource(), DBSEntityType.TYPE);
+            if (!editPage.edit()) {
+                return null;
+            }
+            dataType.setName(editPage.getEntityName());
+            dataType.setObjectDefinitionText("TYPE " + dataType.getName() + " AS OBJECT\n" + "(\n" + ")");
+            return dataType;
+        });
+    }
+
 }
