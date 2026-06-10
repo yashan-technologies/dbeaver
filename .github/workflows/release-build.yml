@@ -33,25 +33,15 @@ jobs:
           distribution: 'temurin'
 
       - name: Build release packages
-        working-directory: dbeaver
-        env:
-          DBEAVER_VERSION: ${{ github.ref_name }}
         run: |
-          # Strip leading 'v' from tag name to get numeric version
-          VERSION="${DBEAVER_VERSION#v}"
-          ../dbeaver-common/mvnw clean install \
-            -Pproduct-dbeaver-ce,product-dbeaver-eclipse-ce,appstore \
-            -T 1C \
-            -f product/aggregate \
-            -Ddbeaver-version="${VERSION}" \
-            --batch-mode \
-            --no-transfer-progress
+          VERSION="${{ github.ref_name }}"
+          echo "MAVEN_ARGS=--batch-mode --no-transfer-progress -Ddbeaver-version=${VERSION#v}" >> "$GITHUB_ENV"
+          ./dbeaver/tools/build.sh
 
       - name: Upload artifacts to GitHub Release
         uses: softprops/action-gh-release@v2
         with:
           files: |
-            dbeaver/product/community/target/products/*.zip
             dbeaver/product/community/target/products/*.tar.gz
           generate_release_notes: true
           fail_on_unmatched_files: true
