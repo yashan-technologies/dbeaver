@@ -1,6 +1,6 @@
 /*
  * DBeaver - Universal Database Manager
- * Copyright (C) 2010-2025 DBeaver Corp and others
+ * Copyright (C) 2010-2026 DBeaver Corp and others
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,6 +17,7 @@
 package org.jkiss.dbeaver.ext.oracle.model;
 
 import org.jkiss.code.NotNull;
+import org.jkiss.code.Nullable;
 import org.jkiss.dbeaver.DBException;
 import org.jkiss.dbeaver.ext.oracle.model.source.OracleSourceObject;
 import org.jkiss.dbeaver.model.DBPEvaluationContext;
@@ -42,7 +43,7 @@ public class OracleProcedureStandalone extends OracleProcedureBase<OracleSchema>
 {
 
     private boolean valid;
-    private String sourceDeclaration;
+    protected String sourceDeclaration;
 
     public OracleProcedureStandalone(
         OracleSchema schema,
@@ -88,6 +89,7 @@ public class OracleProcedureStandalone extends OracleProcedureBase<OracleSchema>
     }
 
     @Override
+    @Nullable
     public Integer getOverloadNumber()
     {
         return null;
@@ -147,6 +149,6 @@ public class OracleProcedureStandalone extends OracleProcedureBase<OracleSchema>
 
     @Override
     public DBSObject refreshObject(@NotNull DBRProgressMonitor monitor) throws DBException {
-        return getSchema().proceduresCache.refreshObject(monitor, getSchema(), this);
+        return getSchema().getProceduresCache().refreshObject(monitor, getSchema(), this);
     }
 }

@@ -1,6 +1,6 @@
 /*
  * DBeaver - Universal Database Manager
- * Copyright (C) 2010-2025 DBeaver Corp and others
+ * Copyright (C) 2010-2026 DBeaver Corp and others
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,8 +16,7 @@
  */
 package org.jkiss.dbeaver.ext.yashandb.ui.config;
 
-import java.util.Map;
-
+import org.jkiss.code.NotNull;
 import org.jkiss.code.Nullable;
 import org.jkiss.dbeaver.ext.yashandb.model.YashanDBPackage;
 import org.jkiss.dbeaver.model.edit.DBECommandContext;
@@ -27,24 +26,29 @@ import org.jkiss.dbeaver.model.struct.DBSEntityType;
 import org.jkiss.dbeaver.ui.UITask;
 import org.jkiss.dbeaver.ui.editors.object.struct.EntityEditPage;
 
+import java.util.Map;
+
+/**
+ * YashanDBPackageConfigurator
+ */
 public class YashanDBPackageConfigurator implements DBEObjectConfigurator<YashanDBPackage> {
 
-	@Override
-	public YashanDBPackage configureObject(@Nullable DBRProgressMonitor monitor,
-			@Nullable DBECommandContext commandContext, @Nullable Object container,
-			@Nullable YashanDBPackage yashandbPackage, @Nullable Map<String, Object> options) {
-		return UITask.run(() -> {
-			EntityEditPage editPage = new EntityEditPage(yashandbPackage.getDataSource(), DBSEntityType.PACKAGE);
-			if (!editPage.edit()) {
-				return null;
-			}
-			String packName = editPage.getEntityName();
-			yashandbPackage.setName(packName);
-			yashandbPackage.setObjectDefinitionText("CREATE OR REPLACE PACKAGE " + packName + "\n" + "AS\n"
-					+ "-- Package header\n" + "END " + packName + ";");
-			yashandbPackage.setExtendedDefinitionText("CREATE OR REPLACE PACKAGE BODY " + packName + "\n" + "AS\n"
-					+ "-- Package body\n" + "END " + packName + ";");
-			return yashandbPackage;
-		});
-	}
+    @Override
+    public YashanDBPackage configureObject(@NotNull DBRProgressMonitor monitor,
+                                           @Nullable DBECommandContext commandContext, @Nullable Object container,
+                                           @NotNull YashanDBPackage yashandbPackage, @NotNull Map<String, Object> options) {
+        return UITask.run(() -> {
+            EntityEditPage editPage = new EntityEditPage(yashandbPackage.getDataSource(), DBSEntityType.PACKAGE);
+            if (!editPage.edit()) {
+                return null;
+            }
+            String packName = editPage.getEntityName();
+            yashandbPackage.setName(packName);
+            yashandbPackage.setObjectDefinitionText("CREATE OR REPLACE PACKAGE " + packName + "\n" + "AS\n"
+                + "-- Package header\n" + "END " + packName + ";");
+            yashandbPackage.setExtendedDefinitionText("CREATE OR REPLACE PACKAGE BODY " + packName + "\n" + "AS\n"
+                + "-- Package body\n" + "END " + packName + ";");
+            return yashandbPackage;
+        });
+    }
 }

@@ -1,6 +1,6 @@
 /*
  * DBeaver - Universal Database Manager
- * Copyright (C) 2010-2025 DBeaver Corp and others
+ * Copyright (C) 2010-2026 DBeaver Corp and others
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,28 +18,29 @@ package org.jkiss.dbeaver.ext.yashandb;
 
 import org.jkiss.code.NotNull;
 import org.jkiss.dbeaver.DBException;
-import org.jkiss.dbeaver.ext.generic.GenericDataSourceProvider;
+import org.jkiss.dbeaver.ext.oracle.OracleDataSourceProvider;
 import org.jkiss.dbeaver.ext.yashandb.model.YashanDBDataSource;
-import org.jkiss.dbeaver.model.DBPDataSource;
 import org.jkiss.dbeaver.model.DBPDataSourceContainer;
+import org.jkiss.dbeaver.model.DatabaseURL;
+import org.jkiss.dbeaver.model.connection.DBPConnectionConfiguration;
+import org.jkiss.dbeaver.model.connection.DBPDriver;
 import org.jkiss.dbeaver.model.runtime.DBRProgressMonitor;
 
-public class YashanDBDataSourceProvider extends GenericDataSourceProvider {
+/**
+ * YashanDBDataSourceProvider
+ */
+public class YashanDBDataSourceProvider extends OracleDataSourceProvider {
 
-	public static final String PROVIDER_ID = "yashandb";
+    @NotNull
+    @Override
+    public String getConnectionURL(@NotNull DBPDriver driver, @NotNull DBPConnectionConfiguration connectionInfo) {
+        return DatabaseURL.generateUrlByTemplate(driver, connectionInfo);
+    }
 
-	public YashanDBDataSourceProvider() {
-	}
-
-	@Override
-	public long getFeatures() {
-		return FEATURE_SCHEMAS;
-	}
-
-	@NotNull
-	@Override
-	public DBPDataSource openDataSource(@NotNull DBRProgressMonitor monitor, @NotNull DBPDataSourceContainer container)
-			throws DBException {
-		return new YashanDBDataSource(monitor, container);
-	}
+    @NotNull
+    @Override
+    public YashanDBDataSource openDataSource(@NotNull DBRProgressMonitor monitor, @NotNull DBPDataSourceContainer container)
+            throws DBException {
+        return new YashanDBDataSource(monitor, container);
+    }
 }

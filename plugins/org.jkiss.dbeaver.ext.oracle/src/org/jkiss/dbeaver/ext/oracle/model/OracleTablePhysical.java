@@ -1,6 +1,6 @@
 /*
  * DBeaver - Universal Database Manager
- * Copyright (C) 2010-2025 DBeaver Corp and others
+ * Copyright (C) 2010-2026 DBeaver Corp and others
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -151,13 +151,13 @@ public abstract class OracleTablePhysical extends OracleTableBase implements DBS
         throws DBException
     {
         // Read indexes using cache
-        return this.getContainer().indexCache.getObjects(monitor, getContainer(), this);
+        return this.getContainer().getIndexCache().getObjects(monitor, getContainer(), this);
     }
 
     public OracleTableIndex getIndex(DBRProgressMonitor monitor, String name)
         throws DBException
     {
-        return this.getContainer().indexCache.getObject(monitor, getContainer(), this, name);
+        return this.getContainer().getIndexCache().getObject(monitor, getContainer(), this, name);
     }
 
     public PartitionCache getPartitionCache() {
@@ -297,7 +297,7 @@ public abstract class OracleTablePhysical extends OracleTableBase implements DBS
      */
     @NotNull
     @Association
-    public Collection<OracleTablePartition> getPartitions(DBRProgressMonitor monitor) throws DBException {
+    public Collection<OracleTablePartition> getPartitions(@NotNull DBRProgressMonitor monitor) throws DBException {
         if (partitionCache == null) {
             return Collections.emptyList();
         }
@@ -321,7 +321,7 @@ public abstract class OracleTablePhysical extends OracleTableBase implements DBS
     @Override
     public DBSObject refreshObject(@NotNull DBRProgressMonitor monitor) throws DBException
     {
-        this.getContainer().indexCache.clearObjectCache(this);
+        this.getContainer().getIndexCache().clearObjectCache(this);
         if (partitionCache != null) {
             partitionCache.clearCache();
         }

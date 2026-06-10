@@ -1,6 +1,6 @@
 /*
  * DBeaver - Universal Database Manager
- * Copyright (C) 2010-2025 DBeaver Corp and others
+ * Copyright (C) 2010-2026 DBeaver Corp and others
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -27,11 +27,7 @@ import org.jkiss.dbeaver.DBException;
 import org.jkiss.dbeaver.model.DBPContextProvider;
 import org.jkiss.dbeaver.model.DBPMessageType;
 import org.jkiss.dbeaver.model.DBPObject;
-import org.jkiss.dbeaver.model.data.DBDAttributeBinding;
-import org.jkiss.dbeaver.model.data.DBDDataFilter;
-import org.jkiss.dbeaver.model.data.DBDDataReceiver;
-import org.jkiss.dbeaver.model.data.DBDValueRow;
-import org.jkiss.dbeaver.model.data.hints.DBDValueHintContext;
+import org.jkiss.dbeaver.model.data.*;
 import org.jkiss.dbeaver.model.edit.DBEPersistAction;
 import org.jkiss.dbeaver.model.preferences.DBPPreferenceStore;
 import org.jkiss.dbeaver.model.runtime.DBRProgressMonitor;
@@ -46,7 +42,7 @@ import java.util.List;
  * ResultSet controller.
  * This interface is not supposed to be implemented by clients.
  */
-public interface IResultSetController extends IDataController, DBPContextProvider, DBPObject {
+public interface IResultSetController extends IDataController, DBPContextProvider, DBPObject, DBDResultSetDataProvider {
 
     String MENU_ID_EDIT = "edit";
     String MENU_ID_VIEW = "view";
@@ -181,6 +177,7 @@ public interface IResultSetController extends IDataController, DBPContextProvide
         @Nullable DBDAttributeBinding attr,
         @Nullable ResultSetRow row,
         int[] rowIndexes,
+        @Nullable ResultSetValuePath valuePath,
         @NotNull ContextMenuLocation menuLocation
     );
 
@@ -240,9 +237,6 @@ public interface IResultSetController extends IDataController, DBPContextProvide
     ////////////////////////////////////////
     // Presentation & panels
 
-    @NotNull
-    DBDValueHintContext getHintContext();
-
     /**
      * Active presentation
      */
@@ -276,6 +270,7 @@ public interface IResultSetController extends IDataController, DBPContextProvide
 
     void lockActionsByFocus(Control lockedBy);
 
+    @NotNull
     IResultSetSelection getSelection();
 
     void addListener(IResultSetListener listener);
@@ -284,6 +279,7 @@ public interface IResultSetController extends IDataController, DBPContextProvide
 
     void updateDirtyFlag();
 
+    // TODO introduce value path here
     boolean updateCellValue(
         @NotNull DBDAttributeBinding attr,
         @NotNull ResultSetRow row,
@@ -291,6 +287,7 @@ public interface IResultSetController extends IDataController, DBPContextProvide
         @Nullable Object value,
         boolean refreshHints) throws DBException;
 
+    // TODO introduce value path here
     void resetCellValue(
         @NotNull DBDAttributeBinding attr,
         @NotNull ResultSetRow row,

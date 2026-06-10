@@ -19,11 +19,13 @@ package org.jkiss.dbeaver.model.ai;
 import org.jkiss.code.NotNull;
 import org.jkiss.code.Nullable;
 import org.jkiss.dbeaver.DBException;
+import org.jkiss.dbeaver.Log;
 import org.jkiss.dbeaver.model.DBPAdaptable;
 import org.jkiss.dbeaver.model.ai.engine.AIEngineProperties;
 import org.jkiss.dbeaver.model.ai.registry.AIEngineDescriptor;
 import org.jkiss.dbeaver.model.ai.registry.AIEngineRegistry;
 import org.jkiss.dbeaver.model.ai.registry.AISettingsManager;
+import org.jkiss.dbeaver.runtime.DBWorkbench;
 
 import java.util.*;
 
@@ -32,17 +34,22 @@ import java.util.*;
  * Keeps global parameters and configuration of all AI engines
  */
 public class AISettings implements DBPAdaptable {
+    protected static final Log log = Log.getLog(AISettings.class);
     private boolean aiDisabled;
     private String activeEngine;
     private final Map<String, AIEngineProperties> engineConfigurations = new LinkedHashMap<>();
     private final Map<String, Object> properties = new LinkedHashMap<>();
     private final Set<String> resolvedSecrets = new HashSet<>();
 
-    private boolean functionsEnabled = true;
-    private final Set<String> enabledFunctionCategories = new LinkedHashSet<>();
-    private final Set<String> enabledFunctions = new LinkedHashSet<>();
+    private final Map<String, String> customInstructions = new LinkedHashMap<>();
 
     public AISettings() {
+        try {
+            aiDisabled = DBWorkbench.isDistributed() && !AISettingsManager.isConfigExists();
+        } catch (DBException e) {
+            log.error("Error checking AI configuration", e);
+            aiDisabled = true;
+        }
     }
 
     @NotNull
@@ -51,8 +58,14 @@ public class AISettings implements DBPAdaptable {
     }
 
     @Nullable
-    public <T> T getProperty(@NotNull String name, @Nullable T defaultValue) {
-        return (T) properties.getOrDefault(name, defaultValue);
+    @SuppressWarnings("unchecked")
+    public <T> T getProperty(@NotNull String name) {
+        return (T) properties.get(name);
+    }
+
+    @NotNull
+    public <T> T getProperty(@NotNull String name, @NotNull T defaultValue) {
+        return Objects.requireNonNullElse(getProperty(name), defaultValue);
     }
 
     public void setProperty(@NotNull String name, @Nullable Object value) {
@@ -63,61 +76,21 @@ public class AISettings implements DBPAdaptable {
         }
     }
 
-    public boolean isFunctionsEnabled() {
-        return functionsEnabled;
-    }
-
-    public void setFunctionsEnabled(boolean functionsEnabled) {
-        this.functionsEnabled = functionsEnabled;
-    }
-
     @NotNull
-    public Set<String> getEnabledFunctions() {
-        return new HashSet<>(enabledFunctions);
+    public Map<String, String> getCustomInstructions() {
+        return Map.copyOf(customInstructions);
     }
 
-    public void setEnabledFunctions(@Nullable Set<String> functions) {
-        this.enabledFunctions.clear();
-        if (functions != null) {
-            this.enabledFunctions.addAll(functions);
-        }
+    @Nullable
+    public String getCustomInstructions(@NotNull String promptGeneratorId) {
+        return customInstructions.get(promptGeneratorId);
     }
 
-    public boolean isFunctionEnabled(@NotNull String functionId) {
-        return enabledFunctions.contains(functionId);
+    public void setCustomInstructions(@NotNull Map<String, String> instructions) {
+        customInstructions.clear();
+        customInstructions.putAll(instructions);
     }
 
-    public void enableFunction(@NotNull String functionId) {
-        enabledFunctions.add(functionId);
-    }
-
-    public void disableFunction(@NotNull String functionId) {
-        enabledFunctions.remove(functionId);
-    }
-
-    @NotNull
-    public Set<String> getEnabledFunctionCategories() {
-        return new HashSet<>(enabledFunctionCategories);
-    }
-
-    public void setEnabledFunctionCategories(@Nullable Set<String> categories) {
-        this.enabledFunctionCategories.clear();
-        if (categories != null) {
-            this.enabledFunctionCategories.addAll(categories);
-        }
-    }
-
-    public boolean isFunctionCategoryEnabled(String category) {
-        return enabledFunctionCategories.contains(category);
-    }
-
-    public void enableFunctionCategory(@NotNull String category) {
-        enabledFunctionCategories.add(category);
-    }
-
-    public void disableFunctionCategory(@NotNull String category) {
-        enabledFunctionCategories.remove(category);
-    }
 
     public boolean isAiDisabled() {
         return aiDisabled;
@@ -127,11 +100,12 @@ public class AISettings implements DBPAdaptable {
         this.aiDisabled = aiDisabled;
     }
 
+    @Nullable
     public String activeEngine() {
         return activeEngine;
     }
 
-    public void setActiveEngine(String activeEngine) {
+    public void setActiveEngine(@NotNull String activeEngine) {
         AIEngineDescriptor engineDescriptor = AIEngineRegistry.getInstance().getEngineDescriptor(activeEngine);
         if (engineDescriptor != null) {
             // Replacement?
@@ -140,7 +114,7 @@ public class AISettings implements DBPAdaptable {
         this.activeEngine = activeEngine;
     }
 
-    public boolean hasConfiguration(String engineId) {
+    public boolean hasConfiguration(@NotNull String engineId) {
         return engineConfigurations.containsKey(engineId);
     }
 
@@ -156,18 +130,17 @@ public class AISettings implements DBPAdaptable {
             aiEngineSettings = engineDescriptor.createPropertiesInstance();
         }
 
-        if (aiEngineSettings != null) {
-            if (!AISettingsManager.saveSecretsAsPlainText()) {
-                if (!resolvedSecrets.contains(engineId)) {
-                    aiEngineSettings.resolveSecrets();
-                    resolvedSecrets.add(engineId);
-                }
+        if (!AISettingsManager.saveSecretsAsPlainText()) {
+            if (!resolvedSecrets.contains(engineId)) {
+                aiEngineSettings.resolveSecrets();
+                resolvedSecrets.add(engineId);
             }
         }
 
         return (T) aiEngineSettings;
     }
 
+    @NotNull
     public Map<String, AIEngineProperties> getEngineConfigurations() {
         return engineConfigurations;
     }

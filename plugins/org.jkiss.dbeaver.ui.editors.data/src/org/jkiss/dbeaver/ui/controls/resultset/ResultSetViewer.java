@@ -69,6 +69,7 @@ import org.jkiss.dbeaver.model.impl.local.StatResultSet;
 import org.jkiss.dbeaver.model.messages.ModelMessages;
 import org.jkiss.dbeaver.model.preferences.DBPPreferenceListener;
 import org.jkiss.dbeaver.model.preferences.DBPPreferenceStore;
+import org.jkiss.dbeaver.model.qm.QMQueryFilter;
 import org.jkiss.dbeaver.model.runtime.AbstractJob;
 import org.jkiss.dbeaver.model.runtime.DBRProgressMonitor;
 import org.jkiss.dbeaver.model.runtime.DBRRunnableWithProgress;
@@ -89,11 +90,11 @@ import org.jkiss.dbeaver.runtime.DBeaverNotifications;
 import org.jkiss.dbeaver.runtime.jobs.DataSourceJob;
 import org.jkiss.dbeaver.tools.transfer.ui.internal.DTUIMessages;
 import org.jkiss.dbeaver.ui.*;
-import org.jkiss.dbeaver.ui.actions.DisabledLabelAction;
 import org.jkiss.dbeaver.ui.controls.*;
 import org.jkiss.dbeaver.ui.controls.autorefresh.AutoRefreshControl;
 import org.jkiss.dbeaver.ui.controls.resultset.actions.*;
 import org.jkiss.dbeaver.ui.controls.resultset.colors.CustomizeColorsAction;
+import org.jkiss.dbeaver.ui.controls.resultset.colors.GroupRowStripingAction;
 import org.jkiss.dbeaver.ui.controls.resultset.colors.ResetAllColorAction;
 import org.jkiss.dbeaver.ui.controls.resultset.colors.ResetRowColorAction;
 import org.jkiss.dbeaver.ui.controls.resultset.handler.*;
@@ -109,6 +110,7 @@ import org.jkiss.dbeaver.ui.data.IValueController;
 import org.jkiss.dbeaver.ui.dialogs.ConfirmationDialog;
 import org.jkiss.dbeaver.ui.editors.data.internal.DataEditorsMessages;
 import org.jkiss.dbeaver.ui.editors.data.preferences.PrefPageResultSetMain;
+import org.jkiss.dbeaver.ui.editors.text.DynamicFindReplaceTarget;
 import org.jkiss.dbeaver.ui.internal.UIMessages;
 import org.jkiss.dbeaver.ui.navigator.NavigatorCommands;
 import org.jkiss.dbeaver.utils.GeneralUtils;
@@ -123,8 +125,8 @@ import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.time.temporal.ChronoUnit;
-import java.util.List;
 import java.util.*;
+import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.stream.Collectors;
 /**
@@ -168,6 +170,8 @@ public class ResultSetViewer extends Viewer
     private final ConComposite mainPanel;
     private final Composite viewerPanel;
     private final IResultSetDecorator decorator;
+    @Nullable
+    private Composite filtersPanelComposite;
     @Nullable
     private ResultSetFilterPanel filtersPanel;
     private final CustomSashForm viewerSash;
@@ -302,6 +306,7 @@ public class ResultSetViewer extends Viewer
 
             var composite = createFilterPanel();
             composite.setLayoutData(gd);
+            updateFilterPanelVisibility();
         }
 
         if (supportsDecoratorFeature(IResultSetDecorator.FEATURE_PRESENTATIONS)) {
@@ -474,6 +479,31 @@ public class ResultSetViewer extends Viewer
         });
     }
 
+    @NotNull
+    @Override
+    public List<ResultSetRow> getSelectedRows() {
+        return getSelection().getSelectedRows();
+    }
+
+    @Nullable
+    @Override
+    public Object getCellValue(
+        @NotNull DBDAttributeBinding attribute,
+        @NotNull DBDValueRow row,
+        @Nullable int[] rowIndexes,
+        @Nullable ResultSetValuePath valuePath,
+        boolean retrieveDeepestCollectionElement
+    ) throws DBException {
+        return model.getCellValue(attribute, row, rowIndexes, valuePath, retrieveDeepestCollectionElement);
+    }
+
+    @Nullable
+    @Override
+    public Object getCellValue(@NotNull DBDAttributeBinding attribute, @NotNull DBDValueRow row) throws DBException {
+        return model.getCellValue(attribute, row);
+    }
+
+
     private void applyCurrentPresentationThemeSettings() {
         if (panelFolder != null) {
             panelFolder.setFont(JFaceResources.getFont(UIFonts.Eclipse.PART_TITLE_FONT));
@@ -507,6 +537,8 @@ public class ResultSetViewer extends Viewer
     ) {
         if (ResultSetPreferences.RESULT_SET_COLORIZE_DATA_TYPES.equals(property)) {
             scheduleThemeUpdate();
+        } else if (ResultSetPreferences.RESULT_SET_SHOW_FILTER_PANEL.equals(property)) {
+            updateFilterPanelVisibility();
         }
     }
 
@@ -789,23 +821,18 @@ public class ResultSetViewer extends Viewer
             isUIUpdateRunning = true;
             if (resultSet instanceof StatResultSet) {
                 // Statistics - let's use special presentation for it
-                if (filtersPanel != null) {
-                    UIUtils.setControlVisible(filtersPanel, false);
-                }
                 if (statusBar != null) {
-                    UIUtils.setControlVisible(statusBar, false);
+                    UIUtils.setControlVisible(statusBar.getParent(), false);
                 }
                 availablePresentations = Collections.emptyList();
                 setActivePresentation(new StatisticsPresentation());
                 activePresentationDescriptor = null;
+                updateFilterPanelVisibility();
                 changed = true;
             } else {
                 // Regular results
-                if (filtersPanel != null) {
-                    UIUtils.setControlVisible(filtersPanel, true);
-                }
                 if (statusBar != null) {
-                    UIUtils.setControlVisible(statusBar, true);
+                    UIUtils.setControlVisible(statusBar.getParent(), true);
                 }
                 IResultSetContext context = new ResultSetContextImpl(this, resultSet);
                 final List<ResultSetPresentationDescriptor> newPresentations;
@@ -829,6 +856,7 @@ public class ResultSetViewer extends Viewer
                     if (activePresentationDescriptor != null && (!metadataChanged || activePresentationDescriptor.getPresentationType().isPersistent())) {
                         if (this.availablePresentations.contains(activePresentationDescriptor)) {
                             // Keep the same presentation
+                            updateFilterPanelVisibility();
                             fireResultSetModelPrepared();
                             return;
                         }
@@ -858,6 +886,7 @@ public class ResultSetViewer extends Viewer
                     log.debug("No presentations for result set [" + resultSet.getClass().getSimpleName() + "]");
                     showEmptyPresentation();
                 }
+                updateFilterPanelVisibility();
                 fireResultSetModelPrepared();
             }
         } finally {
@@ -1713,8 +1742,38 @@ public class ResultSetViewer extends Viewer
 
     @NotNull
     @Override
+    public DBDAttributeBinding[] getAttributes() throws DBException {
+        return model.getAttributes();
+    }
+
+    @NotNull
+    @Override
+    public List<DBDAttributeBinding> getVisibleAttributes() throws DBException {
+        return model.getVisibleAttributes();
+    }
+
+    @NotNull
+    @Override
+    public List<? extends DBDValueRow> getAllRows() {
+        return model.getAllRows();
+    }
+
+    @Nullable
+    @Override
+    public DBDRowIdentifier getDefaultRowIdentifier() {
+        return model.getDefaultRowIdentifier();
+    }
+
+    @NotNull
+    @Override
     public DBDValueHintContext getHintContext() {
         return model.getHintContext();
+    }
+
+    @Nullable
+    @Override
+    public DBSEntity getSingleSource() throws DBException {
+        return model.getSingleSource();
     }
 
     public void redrawData(boolean attributesChanged, boolean rowsChanged) {
@@ -1778,9 +1837,14 @@ public class ResultSetViewer extends Viewer
 
         // Check that we could have hints
         boolean needRefresh = false;
+        int hintOptions = DBDValueHintProvider.OPTION_INLINE;
+        if (this.isRecordMode()) {
+            hintOptions |= DBDValueHintProvider.OPTION_RECORD_MODE;
+        }
         for (DBDAttributeBinding attr : attrs) {
             for (DBDValueRow row : rows) {
-                Object cellValue = model.getCellValue(attr, row, rowIndexes, false);
+                // TODO introduce value path here
+                Object cellValue = model.getCellValue(attr, row, rowIndexes, null, false);
                 List<DBDCellHintProvider> hintProviders = model.getHintContext().getCellHintProviders(attr);
                 for (DBDCellHintProvider provider : hintProviders) {
                     DBDValueHint[] hints = provider.getCellHints(
@@ -1789,7 +1853,8 @@ public class ResultSetViewer extends Viewer
                         row,
                         cellValue,
                         EnumSet.of(DBDValueHint.HintType.STRING),
-                        DBDValueHintProvider.OPTION_INLINE);
+                        hintOptions
+                    );
                     if (hints != null) {
                         for (DBDValueHint hint : hints) {
                             if (!CommonUtils.isEmpty(hint.getHintText())) {
@@ -1856,6 +1921,7 @@ public class ResultSetViewer extends Viewer
     @NotNull
     private Composite createFilterPanel() {
         var composite = new ConComposite(mainPanel);
+        filtersPanelComposite = composite;
         composite.setLayout(new FillLayout());
 
         if (supportsDecoratorFeature(IResultSetDecorator.FEATURE_DECORATE_ON_DEMAND)) {
@@ -1864,6 +1930,8 @@ public class ResultSetViewer extends Viewer
                 public void handleEvent(@NotNull Event event) {
                     createFilterPanel0(composite);
                     updateFiltersText(false);
+                    updateFilterPanelVisibility();
+
                     mainPanel.removeListener(SWT.Activate, this);
                 }
             });
@@ -1882,6 +1950,18 @@ public class ResultSetViewer extends Viewer
         );
     }
 
+    private void updateFilterPanelVisibility() {
+        if (filtersPanelComposite == null || filtersPanelComposite.isDisposed()) {
+            return;
+        }
+        UIUtils.setControlVisible(
+            filtersPanelComposite,
+            !(getActivePresentation() instanceof StatisticsPresentation) &&
+                getPreferenceStore().getBoolean(ResultSetPreferences.RESULT_SET_SHOW_FILTER_PANEL)
+        );
+        mainPanel.layout(true, true);
+    }
+
     @NotNull
     private Composite createStatusBar() {
         var composite = new ConComposite(mainPanel);
@@ -1892,10 +1972,14 @@ public class ResultSetViewer extends Viewer
                 @Override
                 public void handleEvent(@NotNull Event event) {
                     createStatusBar0(composite);
-
                     updateStatusMessage();
                     updateEditControls();
                     updateFiltersText(false);
+
+                    if (getActivePresentation() instanceof StatisticsPresentation) {
+                        // No status bar in statistics presentation
+                        UIUtils.setControlVisible(composite, false);
+                    }
 
                     mainPanel.removeListener(SWT.Activate, this);
                 }
@@ -2021,7 +2105,12 @@ public class ResultSetViewer extends Viewer
             });
             UIUtils.addDefaultEditActionsSupport(site, resultSetSize);
 
-            rowCountLabel = new ActiveStatusMessage(statusBar, DBeaverIcons.getImage(UIIcon.COMPILE), ResultSetMessages.controls_resultset_viewer_calculate_row_count, this) {
+            rowCountLabel = new ActiveStatusMessage(
+                statusBar,
+                DBeaverIcons.getImage(UIIcon.COMPILE),
+                ResultSetMessages.controls_resultset_viewer_calculate_row_count,
+                this
+            ) {
                 @Override
                 protected boolean isActionEnabled() {
                     return hasData();
@@ -2042,10 +2131,6 @@ public class ResultSetViewer extends Viewer
                     };
                 }
             };
-            //rowCountLabel.setLayoutData();
-            CSSUtils.markConnectionTypeColor(rowCountLabel);
-            rowCountLabel.setMessage("Row Count");
-            rowCountLabel.setToolTipText("Calculates total row count in the current dataset");
 
             selectionStatLabel = new Text(statusBar, SWT.READ_ONLY);
             selectionStatLabel.setToolTipText(ResultSetMessages.result_set_viewer_selection_stat_tooltip);
@@ -2079,6 +2164,11 @@ public class ResultSetViewer extends Viewer
         if (curState == null) {
             setNewState(targetEntity, model.getDataFilter());
         }
+
+        // overwrite current model's filters because otherwise they will be aggregated on resultset's metadata update while the former one
+        // might have been describing different entity reference and is not adequate for the current targetEntity of intereset
+        model.setDataFilter(newFilter);
+
         runDataPump(targetEntity, newFilter, 0, getSegmentMaxRows(), -1, true, false, false, null);
     }
 
@@ -2135,7 +2225,7 @@ public class ResultSetViewer extends Viewer
     private void changeMode(boolean recordMode)
     {
         //Object state = savePresentationState();
-        List<ResultSetRow> selectedRows = getSelection().getSelectedRows();
+        List<ResultSetRow> selectedRows = getSelectedRows();
         if (selectedRows.isEmpty()) {
             if (model.getRowCount() > 0) {
                 selectedRows = Collections.singletonList(model.getRow(0));
@@ -2371,8 +2461,7 @@ public class ResultSetViewer extends Viewer
         statusLabel.setStatusTooltip(message);
     }
 
-    public void updateStatusMessage()
-    {
+    public void updateStatusMessage() {
         updateStatusInfo(false);
         updateStatusInfo(true);
         if (rowCountLabel != null && !rowCountLabel.isDisposed()) {
@@ -2748,6 +2837,13 @@ public class ResultSetViewer extends Viewer
             model.isUniqueKeyUndefinedButRequired(executionContext.getDataSource().getContainer());
     }
 
+    @Nullable
+    @Override
+    public String getReadOnlyStatus(@Nullable DBPDataSourceContainer dataSourceContainer) {
+        return model.getReadOnlyStatus(dataSourceContainer);
+    }
+
+    @Nullable
     @Override
     public String getReadOnlyStatus() {
         if (!(activePresentation instanceof IResultSetEditor) || !supportsDecoratorFeature(IResultSetDecorator.FEATURE_EDIT)) {
@@ -2854,7 +2950,7 @@ public class ResultSetViewer extends Viewer
             }
         }
 
-        Collection<ResultSetRow> selectedRows = getSelection().getSelectedRows();
+        Collection<ResultSetRow> selectedRows = getSelectedRows();
         ResultSetRow[] rows = selectedRows.toArray(new ResultSetRow[0]);
 
         FilterValueEditPopup popup = new FilterValueEditPopup(getSite().getShell(), ResultSetViewer.this, curAttribute, rows);
@@ -2938,6 +3034,7 @@ public class ResultSetViewer extends Viewer
         @Nullable final DBDAttributeBinding attr,
         @Nullable final ResultSetRow row,
         int[] rowIndexes,
+        @Nullable ResultSetValuePath valuePath,
         @NotNull ContextMenuLocation menuLocation
     ) {
         // Custom oldValue items
@@ -2945,7 +3042,7 @@ public class ResultSetViewer extends Viewer
         if (attr != null && row != null) {
             valueController = new ResultSetValueController(
                 this,
-                new ResultSetCellLocation(attr, row, rowIndexes),
+                new ResultSetCellLocation(attr, row, rowIndexes, valuePath),
                 IValueController.EditType.NONE,
                 null);
         } else {
@@ -3200,6 +3297,7 @@ public class ResultSetViewer extends Viewer
                 }
             }
             viewMenu.add(new CustomizeColorsAction(this, attr, row));
+            viewMenu.add(new GroupRowStripingAction(this));
             if (hasColorOverrides()) {
                 viewMenu.add(new ResetAllColorAction(this));
             }
@@ -3271,10 +3369,13 @@ public class ResultSetViewer extends Viewer
         if (hdList.isEmpty()) {
             return;
         }
-        menuManager.add(new DisabledLabelAction(getHintObjectLabel(ho) + " hints"));
+        menuManager.add(new EmptyAction(getHintObjectLabel(ho) + " hints"));
+        int hintOptions = DBDValueHintProvider.OPTION_APPROXIMATE;
+        if (this.isRecordMode()) {
+            hintOptions |= DBDValueHintProvider.OPTION_RECORD_MODE;
+        }
         for (ValueHintProviderDescriptor hd : hdList) {
             menuManager.add(new HintEnablementAction(this, hd, attr));
-
             if (hd.getInstance() instanceof DBDCellHintProvider chp) {
                 DBDValueHint[] valueHint = chp.getCellHints(
                     getModel(),
@@ -3282,7 +3383,8 @@ public class ResultSetViewer extends Viewer
                     row,
                     cellValue,
                     EnumSet.of(DBDValueHint.HintType.STRING),
-                    DBDValueHintProvider.OPTION_APPROXIMATE);
+                    hintOptions
+                );
                 if (valueHint == null) {
                     continue;
                 }
@@ -3409,6 +3511,10 @@ public class ResultSetViewer extends Viewer
             layoutMenu.add(new ToggleSelectionStatAction(this, ResultSetPreferences.RESULT_SET_SHOW_SEL_CELLS,
                 ResultSetMessages.controls_resultset_viewer_action_show_selected_cell_count));
         }
+        if ((getDecorator().getDecoratorFeatures() & IResultSetDecorator.FEATURE_FILTERS) != 0) {
+            layoutMenu.add(new Separator());
+            layoutMenu.add(new ToggleFilterPanelAction(this));
+        }
 
         layoutMenu.add(new Separator());
         layoutMenu.add(ActionUtils.makeCommandContribution(site, IResultSetCommands.CMD_ZOOM_IN));
@@ -3467,10 +3573,10 @@ public class ResultSetViewer extends Viewer
         refTablesMenu.setActionDefinitionId(IResultSetCommands.CMD_REFERENCES_MENU);
         refTablesMenu.add(ResultSetReferenceMenu.NOREFS_ACTION);
         if (monitor != null) {
-            ResultSetReferenceMenu.fillRefTablesActions(monitor, this, getSelection().getSelectedRows(), singleSource, refTablesMenu, openInNewWindow);
+            ResultSetReferenceMenu.fillRefTablesActions(monitor, this, getSelectedRows(), singleSource, refTablesMenu, openInNewWindow);
         } else {
             refTablesMenu.addMenuListener(manager ->
-                ResultSetReferenceMenu.fillRefTablesActions(null, this, getSelection().getSelectedRows(), singleSource, manager, openInNewWindow));
+                ResultSetReferenceMenu.fillRefTablesActions(null, this, getSelectedRows(), singleSource, manager, openInNewWindow));
         }
 
         return refTablesMenu;
@@ -4568,7 +4674,6 @@ public class ResultSetViewer extends Viewer
     boolean acquireDataReadLock() {
         synchronized (dataPumpJobQueue) {
             if (dataPumpRunning.get()) {
-                log.debug("Internal error: multiple data reads started (" + dataPumpJobQueue + ")");
                 return false;
             }
             dataPumpRunning.set(true);
@@ -4738,7 +4843,7 @@ public class ResultSetViewer extends Viewer
             final DBDAttributeBinding docAttribute = model.getDocumentAttribute();
             final DBDAttributeBinding[] attributes = model.getAttributes();
 
-            final List<ResultSetRow> selectedRows = getSelection().getSelectedRows();
+            final List<ResultSetRow> selectedRows = getSelectedRows();
             final int[][] partitionedSelectedRows;
 
             if (selectedRows.isEmpty()) {
@@ -4831,10 +4936,7 @@ public class ResultSetViewer extends Viewer
                     }
 
                     this.curRow = model.addNewRow(newRowIndex, cells);
-                    this.selectedRecords = ArrayUtils.add(this.selectedRecords,
-                        this.selectedRecords.length == 0 ?
-                            newRowIndex :
-                            this.selectedRecords[this.selectedRecords.length - 1] + 1);
+                    this.selectedRecords = recordMode ? new int[]{newRowIndex} : selectedRowsIncludingNewRow(newRowIndex);
 
                     newRowIndex++;
                     srcRowIndex++;
@@ -4858,6 +4960,18 @@ public class ResultSetViewer extends Viewer
         return curRow;
     }
 
+    private int[] selectedRowsIncludingNewRow(int newRowIndex) {
+        int[] correctedSelectedRowsIndexes = Arrays.copyOf(this.selectedRecords, this.selectedRecords.length);
+        for (int i = 0; i < correctedSelectedRowsIndexes.length; i++) {
+            if (correctedSelectedRowsIndexes[i] >= newRowIndex) {
+                correctedSelectedRowsIndexes[i]++;
+            }
+        }
+        int[] updatedSelectedRows = ArrayUtils.add(correctedSelectedRowsIndexes, newRowIndex);
+        Arrays.sort(updatedSelectedRows);
+        return updatedSelectedRows;
+    }
+
     @Override
     public void copyRowValues(boolean fromRowAbove, boolean updatePresentation) {
         final DBCExecutionContext context = getExecutionContext();
@@ -4866,7 +4980,7 @@ public class ResultSetViewer extends Viewer
         }
 
         final DBDAttributeBinding docAttribute = model.getDocumentAttribute();
-        final List<ResultSetRow> selectedRows = getSelection().getSelectedRows();
+        final List<ResultSetRow> selectedRows = getSelectedRows();
         final List<DBDAttributeBinding> selectedAttributes = getSelection().getSelectedAttributes();
         final int[][] partitionedSelectedRows = groupConsecutiveRows(
             selectedRows.stream()
@@ -4913,7 +5027,7 @@ public class ResultSetViewer extends Viewer
                             );
                             final ResultSetValueController controller = new ResultSetValueController(
                                 this,
-                                new ResultSetCellLocation(docAttribute, targetRow, null),
+                                new ResultSetCellLocation(docAttribute, targetRow, null, null),
                                 IValueController.EditType.NONE,
                                 null
                             );
@@ -5100,29 +5214,51 @@ public class ResultSetViewer extends Viewer
     }
 
     private static class SimpleFilterManager implements IResultSetFilterManager {
-        private final Map<String, List<String>> filterHistory = new HashMap<>();
+        private final Map<String, List<QMQueryFilter>> filterHistory = new HashMap<>();
+
         @NotNull
         @Override
-        public List<String> getQueryFilterHistory(@Nullable DBCExecutionContext context, @NotNull String query) {
-            final List<String> filters = filterHistory.get(query);
+        public Collection<QMQueryFilter> getQueryFilterHistory(@Nullable DBCExecutionContext context, @NotNull String query) {
+            var filters = filterHistory.get(query);
             if (filters != null) {
-                return filters;
+                return List.copyOf(filters);
             }
-            return Collections.emptyList();
+            return List.of();
         }
 
         @Override
-        public void saveQueryFilterValue(@Nullable DBCExecutionContext context, @NotNull String query, @NotNull String filterValue) {
-            List<String> filters = filterHistory.computeIfAbsent(query, k -> new ArrayList<>());
-            filters.add(filterValue);
+        public void saveQueryFilterValue(@Nullable DBCExecutionContext context, @NotNull QMQueryFilter filter) {
+            var filters = filterHistory.computeIfAbsent(filter.query(), k -> new ArrayList<>());
+            filters.add(filter);
         }
 
         @Override
-        public void deleteQueryFilterValue(@Nullable DBCExecutionContext context, @NotNull String query, String filterValue) {
-            List<String> filters = filterHistory.get(query);
+        public void deleteQueryFilterValue(@Nullable DBCExecutionContext context, @NotNull QMQueryFilter filter) {
+            var filters = filterHistory.get(filter.query());
             if (filters != null) {
-                filters.add(filterValue);
+                filters.add(filter);
             }
+        }
+
+        @Override
+        public void useQueryFilter(@NotNull DBCExecutionContext context, @NotNull QMQueryFilter filter) throws DBException {
+            var filters = filterHistory.get(filter.query());
+            if (filters != null && filters.remove(filter)) {
+                filters.add(new QMQueryFilter(
+                    filter.query(),
+                    filter.text(),
+                    filter.title(),
+                    Instant.now(),
+                    filter.useCount() + 1
+                ));
+                return;
+            }
+            throw new DBException("Filter not found in history");
+        }
+
+        @Override
+        public boolean isPersistent() {
+            return false;
         }
     }
 
@@ -5189,6 +5325,30 @@ public class ResultSetViewer extends Viewer
 
     }
 
+    private static class ToggleFilterPanelAction extends Action {
+        private final ResultSetViewer resultSetViewer;
+
+        ToggleFilterPanelAction(@NotNull ResultSetViewer resultSetViewer) {
+            super(ResultSetMessages.controls_resultset_viewer_action_show_filter_panel, Action.AS_CHECK_BOX);
+            this.resultSetViewer = resultSetViewer;
+        }
+
+        @Override
+        public boolean isChecked() {
+            return resultSetViewer.getPreferenceStore().getBoolean(ResultSetPreferences.RESULT_SET_SHOW_FILTER_PANEL);
+        }
+
+        @Override
+        public void run() {
+            DBPPreferenceStore preferenceStore = resultSetViewer.getPreferenceStore();
+            preferenceStore.setValue(
+                ResultSetPreferences.RESULT_SET_SHOW_FILTER_PANEL,
+                !preferenceStore.getBoolean(ResultSetPreferences.RESULT_SET_SHOW_FILTER_PANEL));
+            PrefUtils.savePreferenceStore(preferenceStore);
+            resultSetViewer.updateFilterPanelVisibility();
+        }
+    }
+
     class HistoryStateItem {
         private static final int HISTORY_STATE_ITEM_MAXIMAL_LENGTH = 50;
 
@@ -5234,7 +5394,7 @@ public class ResultSetViewer extends Viewer
 
     private static class PanelInfo {
         private ResultSetPanelDescriptor descriptor;
-        private IResultSetPanel panel;
+        private final IResultSetPanel panel;
         private ToolBarManager actionToolBar;
 
         public PanelInfo(ResultSetPanelDescriptor descriptor, IResultSetPanel panel) {

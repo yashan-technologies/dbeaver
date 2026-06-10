@@ -60,7 +60,6 @@ import java.time.Duration;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
-@SuppressWarnings("rawtypes")
 public abstract class TaskConfigurationWizard<SETTINGS extends DBTTaskSettings> extends BaseWizard implements IWorkbenchWizard {
 
     private static final Log log = Log.getLog(TaskConfigurationWizard.class);
@@ -69,13 +68,13 @@ public abstract class TaskConfigurationWizard<SETTINGS extends DBTTaskSettings> 
 
     private DBTTask currentTask;
     private IStructuredSelection currentSelection;
-    private Button saveAsTaskButton;
     private TaskConfigurationWIzardActionConfigurator<SETTINGS> actionsConfigurator;
 
     private Map<String, Object> variables;
     private boolean promptVariables;
     private DBTTaskContext taskContext;
     @Nullable private DBTTaskFolder currentSelectedTaskFolder;
+    private boolean taskEditorDisabled;
 
     protected TaskConfigurationWizard() {
     }
@@ -156,7 +155,7 @@ public abstract class TaskConfigurationWizard<SETTINGS extends DBTTaskSettings> 
     }
 
     @Override
-    public void init(IWorkbench workbench, IStructuredSelection currentSelection) {
+    public void init(@NotNull IWorkbench workbench, @Nullable IStructuredSelection currentSelection) {
         updateWizardTitle();
         setNeedsProgressMonitor(true);
         this.currentSelection = currentSelection;
@@ -169,7 +168,7 @@ public abstract class TaskConfigurationWizard<SETTINGS extends DBTTaskSettings> 
         addTaskConfigPages();
     }
 
-    protected boolean isTaskConfigPage(IWizardPage page) {
+    protected boolean isTaskConfigPage(@NotNull IWizardPage page) {
         return page instanceof TaskConfigurationWizardPageTask || page instanceof TaskConfigurationWizardPageSettings;
     }
 
@@ -183,6 +182,10 @@ public abstract class TaskConfigurationWizard<SETTINGS extends DBTTaskSettings> 
         }
     }
 
+    public boolean isTaskSaveEnabled() {
+        return !taskEditorDisabled;
+    }
+
     public boolean isNewTaskEditor() {
         return currentTask != null && getProject().getTaskManager().getTaskById(currentTask.getId()) == null;
     }
@@ -192,7 +195,7 @@ public abstract class TaskConfigurationWizard<SETTINGS extends DBTTaskSettings> 
     }
 
     @Override
-    public IWizardPage getNextPage(IWizardPage page) {
+    public IWizardPage getNextPage(@NotNull IWizardPage page) {
         IWizardPage nextPage = super.getNextPage(page);
         if (nextPage instanceof TaskConfigurationWizardPageSettings &&
             page instanceof TaskConfigurationWizardPageTask &&
@@ -205,7 +208,7 @@ public abstract class TaskConfigurationWizard<SETTINGS extends DBTTaskSettings> 
     }
 
     @Override
-    public IWizardPage getPreviousPage(IWizardPage page) {
+    public IWizardPage getPreviousPage(@NotNull IWizardPage page) {
         IWizardPage prevPage = super.getPreviousPage(page);
         if (prevPage instanceof TaskConfigurationWizardPageSettings &&
             !TaskUIRegistry.getInstance().supportsConfiguratorPage(getContainer().getTaskPage().getSelectedTaskType()))
@@ -227,21 +230,14 @@ public abstract class TaskConfigurationWizard<SETTINGS extends DBTTaskSettings> 
             }
         }
         TaskConfigurationWizardPageTask taskPage = getContainer().getTaskPage();
-        if (taskPage != null && !taskPage.isPageComplete()) {
-            return false;
-        }
-
-        return true;
+        return taskPage == null || taskPage.isPageComplete();
     }
 
-    protected boolean isPageNeedsCompletion(IWizardPage page) {
+    protected boolean isPageNeedsCompletion(@NotNull IWizardPage page) {
         if (page instanceof TaskConfigurationWizardPageTask) {
             return false;
         }
-        if (page instanceof IWizardPageNavigable pageNavigable && !pageNavigable.isPageApplicable()) {
-            return false;
-        }
-        return true;
+        return !(page instanceof IWizardPageNavigable pageNavigable) || pageNavigable.isPageApplicable();
     }
 
     @Override
@@ -282,11 +278,11 @@ public abstract class TaskConfigurationWizard<SETTINGS extends DBTTaskSettings> 
         return true;
     }
 
-    protected boolean isPageValid(IWizardPage page) {
+    protected boolean isPageValid(@NotNull IWizardPage page) {
         return true;
     }
 
-    private boolean saveTask() {
+    boolean saveTask() {
         IWizardPage currentPage = getContainer().getCurrentPage();
         // Save current page settings
         if (currentPage instanceof IWizardPageActive) {
@@ -357,6 +353,7 @@ public abstract class TaskConfigurationWizard<SETTINGS extends DBTTaskSettings> 
         if (tasksViewDescriptor == null || getContainer().isSelectorMode()) {
             // Do not create save buttons
             UIUtils.createEmptyLabel(parent, hSpan, 1);
+            taskEditorDisabled = true;
         } else {
             Composite panel = new Composite(parent, SWT.NONE);
             panel.setBackground(parent.getBackground());
@@ -378,14 +375,6 @@ public abstract class TaskConfigurationWizard<SETTINGS extends DBTTaskSettings> 
                     }
                 });
             }
-
-            saveAsTaskButton = UIUtils.createPushButton(
-                panel,
-                null,
-                TaskUIMessages.task_config_wizard_button_save_task,
-                UIIcon.SAVE,
-                SelectionListener.widgetSelectedAdapter(selectionEvent -> saveTask())
-            );
 
             layout.numColumns++;
             Button taskViewButton = UIUtils.createPushButton(
@@ -492,9 +481,6 @@ public abstract class TaskConfigurationWizard<SETTINGS extends DBTTaskSettings> 
     }
 
     void enableTaskButtons(boolean enable) {
-        if (saveAsTaskButton != null) {
-            saveAsTaskButton.setEnabled(enable);
-        }
         if (actionsConfigurator != null) {
             actionsConfigurator.enableActions(enable);
         }
@@ -504,9 +490,6 @@ public abstract class TaskConfigurationWizard<SETTINGS extends DBTTaskSettings> 
     }
 
     public void updateTaskButtons() {
-        if (saveAsTaskButton != null) {
-            saveAsTaskButton.setEnabled(canFinish() && getTaskType() != null);
-        }
         if (actionsConfigurator != null) {
             actionsConfigurator.updateActions();
         }

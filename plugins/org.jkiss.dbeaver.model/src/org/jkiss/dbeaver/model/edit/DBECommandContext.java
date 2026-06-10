@@ -1,6 +1,6 @@
 /*
  * DBeaver - Universal Database Manager
- * Copyright (C) 2010-2025 DBeaver Corp and others
+ * Copyright (C) 2010-2026 DBeaver Corp and others
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -65,6 +65,8 @@ public interface DBECommandContext extends DBPContextProvider {
 
     void addCommand(@NotNull DBECommand<?> command, @Nullable DBECommandReflector reflector, boolean execute);
 
+    void addCommand(@NotNull DBECommand<?> command, @Nullable DBECommandReflector reflector, boolean execute, @Nullable DBECommand<?> linkedCommand);
+
     //void addCommandBatch(List<DBECommand> commands, DBECommandReflector reflector, boolean execute);
 
     void removeCommand(@NotNull DBECommand<?> command);
@@ -75,6 +77,7 @@ public interface DBECommandContext extends DBPContextProvider {
 
     void removeCommandListener(@NotNull DBECommandListener listener);
 
+    @NotNull
     Map<Object, Object> getUserParams();
 
 }

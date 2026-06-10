@@ -1,6 +1,6 @@
 /*
  * DBeaver - Universal Database Manager
- * Copyright (C) 2010-2025 DBeaver Corp and others
+ * Copyright (C) 2010-2026 DBeaver Corp and others
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,96 +16,45 @@
  */
 package org.jkiss.dbeaver.ext.yashandb.ui.config;
 
-import java.util.Map;
-
-import org.eclipse.jface.dialogs.Dialog;
 import org.eclipse.jface.dialogs.IDialogConstants;
-import org.eclipse.swt.SWT;
-import org.eclipse.swt.layout.GridData;
-import org.eclipse.swt.widgets.Composite;
-import org.eclipse.swt.widgets.Control;
-import org.eclipse.swt.widgets.Shell;
-import org.eclipse.swt.widgets.Text;
+import org.jkiss.code.NotNull;
 import org.jkiss.code.Nullable;
+import org.jkiss.dbeaver.ext.oracle.ui.config.OracleSchemaConfigurator;
+import org.jkiss.dbeaver.ext.oracle.ui.config.OracleSchemaConfigurator.NewUserDialog;
 import org.jkiss.dbeaver.ext.yashandb.model.YashanDBDataSource;
 import org.jkiss.dbeaver.ext.yashandb.model.YashanDBSchema;
-import org.jkiss.dbeaver.ext.yashandb.model.YashanDBUser;
-import org.jkiss.dbeaver.ext.yashandb.ui.internal.YashanDBUIMessages;
 import org.jkiss.dbeaver.model.edit.DBECommandContext;
 import org.jkiss.dbeaver.model.edit.DBEObjectConfigurator;
-import org.jkiss.dbeaver.model.impl.DBObjectNameCaseTransformer;
 import org.jkiss.dbeaver.model.runtime.DBRProgressMonitor;
 import org.jkiss.dbeaver.ui.UITask;
 import org.jkiss.dbeaver.ui.UIUtils;
 
+import java.util.Map;
+
+/**
+ * YashanDBSchemaConfigurator
+ */
 public class YashanDBSchemaConfigurator implements DBEObjectConfigurator<YashanDBSchema> {
 
-	@Override
-	public YashanDBSchema configureObject(@Nullable DBRProgressMonitor monitor,
-			@Nullable DBECommandContext commandContext, @Nullable Object container, @Nullable YashanDBSchema newSchema,
-			@Nullable Map<String, Object> options) {
-		return new UITask<YashanDBSchema>() {
-			@Override
-			protected YashanDBSchema runTask() {
-				NewUserDialog dialog = new NewUserDialog(UIUtils.getActiveWorkbenchShell(),
-						(YashanDBDataSource) container);
-				if (dialog.open() != IDialogConstants.OK_ID) {
-					return null;
-				}
-				newSchema.setName(dialog.getUser().getName());
-				newSchema.setUser(dialog.getUser());
+    @Override
+    public YashanDBSchema configureObject(@NotNull DBRProgressMonitor monitor,
+                                          @Nullable DBECommandContext commandContext, @NotNull Object container,
+                                          @NotNull YashanDBSchema newSchema,
+                                          @NotNull Map<String, Object> options) {
+        return new UITask<YashanDBSchema>() {
+            @Override
+            protected YashanDBSchema runTask() {
+                NewUserDialog dialog = new OracleSchemaConfigurator.NewUserDialog(UIUtils.getActiveWorkbenchShell(),
+                    (YashanDBDataSource) container);
+                if (dialog.open() != IDialogConstants.OK_ID) {
+                    return null;
+                }
+                newSchema.setName(dialog.getUser().getName());
+                newSchema.setUser(dialog.getUser());
 
-				return newSchema;
-			}
-		}.execute();
-	}
+                return newSchema;
+            }
+        }.execute();
+    }
 
-	static class NewUserDialog extends Dialog {
-
-		private YashanDBUser user;
-		private Text nameText;
-		private Text passwordText;
-
-		NewUserDialog(Shell parentShell, YashanDBDataSource dataSource) {
-			super(parentShell);
-			this.user = new YashanDBUser(dataSource);
-		}
-
-		YashanDBUser getUser() {
-			return user;
-		}
-
-		@Override
-		protected boolean isResizable() {
-			return true;
-		}
-
-		@Override
-		protected Control createDialogArea(Composite parent) {
-			getShell().setText(YashanDBUIMessages.dialog_schema_edit_title);
-
-			Control container = super.createDialogArea(parent);
-			Composite composite = UIUtils.createPlaceholder((Composite) container, 2, 5);
-			composite.setLayoutData(new GridData(GridData.FILL_BOTH));
-
-			nameText = UIUtils.createLabelText(composite, YashanDBUIMessages.dialog_schema_edit_user_name, null);
-			nameText.setLayoutData(new GridData(GridData.FILL_HORIZONTAL));
-			passwordText = UIUtils.createLabelText(composite, YashanDBUIMessages.dialog_schema_edit_user_password, null,
-					SWT.BORDER | SWT.PASSWORD);
-			passwordText.setLayoutData(new GridData(GridData.FILL_HORIZONTAL));
-
-			UIUtils.createInfoLabel(composite, YashanDBUIMessages.dialog_schema_edit_label, GridData.FILL_HORIZONTAL,
-					2);
-
-			return parent;
-		}
-
-		@Override
-		protected void okPressed() {
-			user.setName(DBObjectNameCaseTransformer.transformObjectName(user, nameText.getText().trim()));
-			user.setPassword(passwordText.getText());
-			super.okPressed();
-		}
-
-	}
 }

@@ -30,6 +30,7 @@ import org.eclipse.swt.SWT;
 import org.eclipse.swt.dnd.TextTransfer;
 import org.eclipse.swt.events.*;
 import org.eclipse.swt.graphics.Color;
+import org.eclipse.swt.graphics.Font;
 import org.eclipse.swt.graphics.Image;
 import org.eclipse.swt.graphics.Rectangle;
 import org.eclipse.swt.layout.GridData;
@@ -60,8 +61,8 @@ import org.jkiss.utils.ArrayUtils;
 import org.jkiss.utils.CommonUtils;
 
 import java.lang.reflect.InvocationTargetException;
-import java.util.List;
 import java.util.*;
+import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.regex.PatternSyntaxException;
@@ -287,6 +288,7 @@ public abstract class ObjectListControl<OBJECT_TYPE> extends ProgressPageControl
         return itemsViewer;
     }
 
+    @Nullable
     protected ObjectColumn getColumnByIndex(int index) {
         return columnController.getColumnData(index);
     }
@@ -844,6 +846,11 @@ public abstract class ObjectListControl<OBJECT_TYPE> extends ProgressPageControl
         return null;
     }
 
+    @Nullable
+    protected Font getObjectFont(OBJECT_TYPE item) {
+        return null;
+    }
+
     protected boolean isNewObject(OBJECT_TYPE objectValue) {
         return false;
     }
@@ -965,7 +972,7 @@ public abstract class ObjectListControl<OBJECT_TYPE> extends ProgressPageControl
                     int columnsCount = columnController.getColumnsCount();
                     for (int i = 0; i < columnsCount; i++) {
                         ObjectColumn column = getColumnByIndex(i);
-                        if (column.isNameColumn(object)) {
+                        if (column != null && column.isNameColumn(object)) {
                             nameColumn = column;
                             break;
                         }
@@ -1175,6 +1182,14 @@ public abstract class ObjectListControl<OBJECT_TYPE> extends ProgressPageControl
         }
 
         @Override
+        public Font getFont(Object element) {
+            if (element instanceof ObjectsGroupingWrapper) {
+                return null;
+            }
+            return getObjectFont((OBJECT_TYPE) element);
+        }
+
+        @Override
         public String getText(Object element, boolean forUI) {
             return getText(element, forUI, false);
         }
@@ -1240,7 +1255,7 @@ public abstract class ObjectListControl<OBJECT_TYPE> extends ProgressPageControl
         }
 
         @Override
-        public void completeLoading(Collection<OBJECT_TYPE> items) {
+        public void completeLoading(@Nullable Collection<OBJECT_TYPE> items) {
             super.completeLoading(items);
             afterCompleteLoading(items);
         }
@@ -1256,7 +1271,7 @@ public abstract class ObjectListControl<OBJECT_TYPE> extends ProgressPageControl
         }
 
         @Override
-        public void completeLoading(Void v) {
+        public void completeLoading(@Nullable Void v) {
             super.completeLoading(v);
         }
     }
@@ -1480,7 +1495,12 @@ public abstract class ObjectListControl<OBJECT_TYPE> extends ProgressPageControl
             // Header
             for (int i = 0; i < columnsCount; i++) {
                 ObjectColumn column = getColumnByIndex(i);
-                if (i > 0) buf.append("\t");
+                if (column == null) {
+                    continue;
+                }
+                if (!buf.isEmpty()) {
+                    buf.append("\t");
+                }
                 buf.append(column.displayName);
             }
             buf.append("\n");
@@ -1488,16 +1508,25 @@ public abstract class ObjectListControl<OBJECT_TYPE> extends ProgressPageControl
         List<OBJECT_TYPE> elementList = itemsViewer.getStructuredSelection().toList();
         for (OBJECT_TYPE element : elementList) {
             Object object = getObjectValue(element);
+            boolean hasValue = false;
             for (int i = 0; i < columnsCount; i++) {
-                ObjectPropertyDescriptor property = getColumnByIndex(i).getProperty(object);
+                ObjectColumn column = getColumnByIndex(i);
+                if (column == null) {
+                    continue;
+                }
+                ObjectPropertyDescriptor property = column.getProperty(object);
                 try {
                     Object cellValue = property == null ? null : property.readValue(object, new VoidProgressMonitor(), true);
-                    if (i > 0) buf.append("\t");
+                    if (hasValue) {
+                        buf.append("\t");
+                    }
                     String strValue = DBValueFormatting.getDefaultValueDisplayString(cellValue, DBDDisplayFormat.UI);
                     if (strValue.contains("\n") || strValue.contains("\t")) {
-                        strValue = '"' + strValue + '"';
+                        buf.append('"').append(strValue).append('"');
+                    } else {
+                        buf.append(strValue);
                     }
-                    buf.append(strValue);
+                    hasValue = true;
                 } catch (Throwable e) {
                     // ignore
                 }
@@ -1533,6 +1562,9 @@ public abstract class ObjectListControl<OBJECT_TYPE> extends ProgressPageControl
                         public void run() {
                             if (columnPersist) {
                                 groupingColumn = getColumnByIndex(selectedColumnNumber);
+                                if (groupingColumn == null) {
+                                    return;
+                                }
                                 groupingColumn.columnIndex = selectedColumnNumber;
                                 originalColumnOrder = ((TreeViewer) itemsViewer).getTree().getColumnOrder();
                                 moveGroupingColumnInTheBeginning(selectedColumnNumber);

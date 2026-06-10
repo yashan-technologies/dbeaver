@@ -83,9 +83,8 @@ class PostgreBackupWizardPageObjects extends AbstractNativeToolWizardPage<Postgr
             composite,
             PostgreMessages.wizard_backup_page_object_group_object,
             1,
-            GridData.FILL_HORIZONTAL
+            GridData.FILL_BOTH
         );
-        objectsGroup.setLayoutData(new GridData(GridData.FILL_BOTH));
 
         connInfo = new CLabel(objectsGroup, SWT.WRAP);
         connInfo.setLayoutData(new GridData(SWT.FILL, SWT.CENTER, true, false));
@@ -120,6 +119,7 @@ class PostgreBackupWizardPageObjects extends AbstractNativeToolWizardPage<Postgr
                 @Override
                 public void widgetSelected(SelectionEvent e) {
                     wizard.getSettings().setFullSchemaBackup(fullSchemaBackupCheck.getSelection());
+                    tablesTable.setVisible(!fullSchemaBackupCheck.getSelection());
                 }
             });
             fullSchemaBackupCheck.setLayoutData(new GridData(GridData.GRAB_HORIZONTAL));
@@ -374,7 +374,6 @@ class PostgreBackupWizardPageObjects extends AbstractNativeToolWizardPage<Postgr
     private void updatefullSchemaBackupState() {
     	boolean allSchemasSelected =isAllSchemaSelected();
         fullSchemaBackupCheck.setEnabled(allSchemasSelected);
-        fullSchemaBackupCheck.setSelection(allSchemasSelected);
         wizard.getSettings().setFullSchemaBackup(allSchemasSelected);
     }
     @Override

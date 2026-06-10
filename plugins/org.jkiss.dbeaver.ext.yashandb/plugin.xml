@@ -3,7 +3,7 @@
 <plugin>
 
 	<extension point="org.jkiss.dbeaver.sqlDialect">
-        <dialect id="yashandb" parent="basic" class="org.jkiss.dbeaver.ext.yashandb.model.YashanDBSQLDialect"
+        <dialect id="yashandb" parent="oracle" class="org.jkiss.dbeaver.ext.yashandb.model.YashanDBSQLDialect"
                  label="YashanDB" description="YashanDB SQL dialect." icon="icons/yashandb_icon.png">
             <property name="insertMethods" value="yashandbInsertIgnore"/>
         </dialect>
@@ -15,9 +15,35 @@
                 description="YashanDB connector"
                 id="yashandb"
                 label="YashanDB"
+                parent="oracle"
                 icon="icons/yashandb_icon.png"
                 dialect="yashandb">
-            
+
+            <treeInjection path="oracle/schema"
+                           changeFolderType="org.jkiss.dbeaver.ext.yashandb.model.YashanDBSchema"/>
+            <treeInjection path="oracle/schema/table"
+                           changeFolderType="org.jkiss.dbeaver.ext.yashandb.model.YashanDBTable"/>
+            <treeInjection path="oracle/schema/table/column"
+                           changeFolderType="org.jkiss.dbeaver.ext.yashandb.model.YashanDBTableColumn"/>
+            <treeInjection path="oracle/schema/table/trigger"
+                           changeFolderType="org.jkiss.dbeaver.ext.yashandb.model.YashanDBTableTrigger"/>
+            <treeInjection path="oracle/schema/type"
+                           changeFolderType="org.jkiss.dbeaver.ext.yashandb.model.YashanDBDataType"/>
+            <treeInjection path="oracle/schema/package"
+                           changeFolderType="org.jkiss.dbeaver.ext.yashandb.model.YashanDBPackage"/>
+            <treeInjection path="oracle/schema/tabletrigger"
+                           changeFolderType="org.jkiss.dbeaver.ext.yashandb.model.YashanDBTableTrigger"/>
+            <treeInjection path="oracle/schema/schedulerJob"
+                           changeFolderType="org.jkiss.dbeaver.ext.yashandb.model.YashanDBSchedulerJob"/>
+            <treeInjection path="oracle/schema/view"
+                           changeFolderType="org.jkiss.dbeaver.ext.yashandb.model.YashanDBView"/>
+            <treeInjection path="oracle/schema/procedure"
+                           changeFolderType="org.jkiss.dbeaver.ext.yashandb.model.YashanDBProcedureStandalone"/>
+            <treeInjection path="oracle/schema/function"
+                           changeFolderType="org.jkiss.dbeaver.ext.yashandb.model.YashanDBProcedureStandalone"/>
+            <treeInjection path="oracle/tablespace"
+                           changeFolderType="org.jkiss.dbeaver.ext.yashandb.model.YashanDBTablespace"/>
+			            
             <drivers managable="true">
                 <driver
                         id="yashandb"
@@ -38,403 +64,27 @@
                     <file type="jar" path="drivers/yashandb" bundle="drivers.yashandb"/>
                 </driver>
             </drivers>
-            
-            <tree path="yashandb"
-                  label="YashanDB data source"
-                  icon="icons/yashandb_icon.png">
-                <folder type="org.jkiss.dbeaver.ext.yashandb.model.YashanDBSchema"
-                        label="%tree.schemas.node.name"
-                        icon="#folder_schema"
-                        description="Database schemas">
-                    <items label="%tree.schema.node.name" path="schema" property="schemas" icon="#schema">
-                        <folder type="org.jkiss.dbeaver.ext.yashandb.model.YashanDBTable" label="%tree.tables.node.name"
-                                icon="#folder_table" description="Schema Tables">
-                            <items label="%tree.table.node.name" path="table" property="tables" icon="#table">
-                                <folder type="org.jkiss.dbeaver.ext.yashandb.model.YashanDBTableColumn"
-                                        label="%tree.columns.node.name" icon="#columns"
-                                        description="Table Columns">
-                                    <items label="%tree.column.node.name" path="attribute" property="attributes"
-                                           icon="#column">
-                                    </items>
-                                </folder>
-                                <folder type="org.jkiss.dbeaver.ext.yashandb.model.YashanDBTableConstraint"
-                                        label="%tree.constraints.node.name" icon="#constraints"
-                                        description="Table Constraints">
-                                    <items label="%tree.constraint.node.name" path="constraint" property="constraints"
-                                           icon="#unique-key">
-                                        <items label="%tree.constraint.columns.node.name"
-                                               itemLabel="%tree.column.node.name"
-                                               path="column" property="attributeReferences" navigable="false"
-                                               inline="true">
-                                        </items>
-                                    </items>
-                                </folder>
-                                <folder type="org.jkiss.dbeaver.ext.yashandb.model.YashanDBTableForeignKey"
-                                        label="%tree.foreign_keys.node.name" icon="#foreign-keys"
-                                        description="Foreign keys">
-                                    <items label="%tree.foreign_key.node.name" path="association"
-                                           property="associations"
-                                           icon="#foreign-key">
-                                        <items label="%tree.foreign_key_columns.node.name"
-                                               itemLabel="%tree.column.node.name" path="column"
-                                               property="attributeReferences" navigable="false" inline="true">
-                                        </items>
-                                    </items>
-                                </folder>
-                                <folder type="org.jkiss.dbeaver.ext.yashandb.model.YashanDBTableIndex"
-                                        label="%tree.indexes.node.name" icon="#indexes"
-                                        description="Indexes">
-                                    <items label="%tree.index.node.name" path="index" property="indexes" icon="#index">
-                                        <items label="%tree.index_columns.node.name" path="column"
-                                               property="attributeReferences" icon="#column" navigable="false"
-                                               inline="true">
-                                        </items>
-                                    </items>
-                                </folder>
-                                <folder label="%tree.references.node.name" icon="#references"
-                                        description="References"
-                                        virtual="true">
-                                    <items label="%tree.reference.node.name" path="reference" property="references"
-                                           icon="#reference" virtual="true">
-                                        <items label="%tree.reference_columns.node.name"
-                                               itemLabel="%tree.column.node.name"
-                                               path="column" property="attributeReferences" navigable="false"
-                                               inline="true"
-                                               virtual="true">
-                                        </items>
-                                    </items>
-                                </folder>
-                             	<folder type="org.jkiss.dbeaver.ext.yashandb.model.YashanDBTableTrigger"
-                                        label="%tree.triggers.node.name" icon="#triggers"
-                                        description="Table Triggers">
-                                    <items label="%tree.trigger.node.name" path="trigger" property="triggers"
-                                           icon="#trigger"/>
-                                </folder>
-                           	    <folder type="org.jkiss.dbeaver.ext.yashandb.model.YashanDBPartitionBase"
-                                        label="%tree.partitions.node.name" icon="#partitions"
-                                        description="Table partitions">
-                                    <items label="%tree.partition.node.name" path="partition" property="partitions"
-                                           icon="#partition">
-                                        <folder type="org.jkiss.dbeaver.ext.yashandb.model.YashanDBPartitionBase"
-                                                label="%tree.subpartitions.node.name" icon="#partitions"
-                                                description="Subpartitions">
-                                            <items label="%tree.subpartitions.node.name"
-                                                   itemLabel="%tree.subpartition.node.name" path="subpartition"
-                                                   property="subPartitions" navigable="false" inline="true">
-                                            </items>
-                                        </folder>
-                                    </items>
-                                </folder>
-                                <folder type="org.jkiss.dbeaver.ext.yashandb.model.YashanDBDependency"
-                                        label="%tree.dependencies.node.name"
-                                        description="Table dependency/dependent objects">
-                                    <items label="%tree.dependency.node.name" path="dependency" property="dependencies"
-                                           icon="platform:/plugin/org.jkiss.dbeaver.ui/icons/file/link.png">
-                                        <items label="%tree.dependencies.node.name" path="entry" property="entries"
-                                               navigable="false" inline="true">
-                                        </items>
-                                    </items>
-                                </folder>
-                            </items>
-                        </folder>
-                        <folder type="org.jkiss.dbeaver.ext.yashandb.model.YashanDBView" label="%tree.views.node.name"
-                                icon="#folder_view" description="Views">
-                            <items label="%tree.view.node.name" path="view" property="views" icon="#view">
-                                <folder type="org.jkiss.dbeaver.ext.yashandb.model.YashanDBTableColumn"
-                                        label="%tree.columns.node.name" icon="#columns" description="View columns">
-                                    <items label="%tree.column.node.name" path="attribute" property="attributes"
-                                           icon="#column">
-                                    </items>
-                                </folder>
-                            </items>
-                        </folder>
-                        <folder type="org.jkiss.dbeaver.ext.yashandb.model.YashanDBMaterializedView" label="%tree.materialized_views.node.name" icon="#folder_view" description="Materialized Views">
-                            <items label="%tree.materialized_view.node.name" path="view" property="materializedViews" icon="#view">
-                                <folder type="org.jkiss.dbeaver.ext.yashandb.model.YashanDBTableColumn" label="%tree.columns.node.name" icon="#columns" description="View columns">
-                                    <items label="%tree.columns.node.name" itemLabel="%tree.column.node.name" path="column" property="attributes" icon="#column">
-                                    </items>
-                                </folder>
-                                <folder type="org.jkiss.dbeaver.ext.yashandb.model.YashanDBTableConstraint" label="%tree.constraints.node.name" icon="#constraints" description="View constraints">
-                                    <items label="%tree.constraint.node.name" path="constraint" property="constraints" icon="#unique-key">
-                                        <items label="%tree.constraint.node.name columns" path="column" property="attributeReferences" navigable="false" inline="true">
-                                        </items>
-                                    </items>
-                                </folder>
-                            </items>
-                        </folder>
-                        <folder type="org.jkiss.dbeaver.ext.yashandb.model.YashanDBTableIndex" label="%tree.indexes.node.name"
-                                icon="#indexes" description="Indexes">
-                            <items icon="#index" label="%tree.index.node.name" path="index" property="indexes"
-                                   virtual="true">
-                                <items icon="#column" label="%tree.index_columns.node.name"
-                                       itemLabel="%tree.column.node.name" path="column" property="attributeReferences"
-                                       inline="true" navigable="false" virtual="true">
-                                </items>
-                            </items>
-                        </folder>
-                        <folder type="org.jkiss.dbeaver.ext.yashandb.model.YashanDBProcedureStandalone"
-                                label="%tree.procedures.node.name" icon="#procedures" description="Procedures">
-                            <items label="%tree.procedures.node.name" itemLabel="%tree.procedure.node.name"
-                                   path="procedure"
-                                   property="proceduresOnly" icon="#procedure">
-                                <folder label="%tree.column.node.name" icon="#columns"
-                                        description="Procedure parameters">
-                                    <items label="%tree.procedure_columns.node.name" itemLabel="%tree.column.node.name"
-                                           path="column" property="parameters" navigable="false"/>
-                                </folder>
-                            </items>
-                        </folder>
-                        <folder type="org.jkiss.dbeaver.ext.yashandb.model.YashanDBProcedureStandalone" label="%tree.functions.node.name" icon="#functions" description="Functions">
-                            <items label="%tree.functions.node.name" itemLabel="%tree.function.node.name"
-                                   path="function"
-                                   property="functionsOnly" icon="#function">
-                                <items label="%tree.function_columns.node.name" itemLabel="%tree.column.node.name"
-                                       path="column" property="parameters" navigable="false"/>
-                            </items>
-                        </folder>
-                        <folder type="org.jkiss.dbeaver.ext.yashandb.model.YashanDBSequence"
-                                label="%tree.sequences.node.name"
-                                icon="#sequences" description="Sequences">
-                            <items label="%tree.sequence.node.name" path="sequence" property="sequences"
-                                   icon="#sequence"/>
-                        </folder>
-                        <folder type="org.jkiss.dbeaver.ext.yashandb.model.YashanDBDataType"
-                                label="%tree.types.node.name" icon="#data_types" description="Types">
-                           <items label="%tree.type.node.name" path="type" property="dataTypes" icon="#data_type">
-                                <folder type="org.jkiss.dbeaver.ext.yashandb.model.YashanDBDataTypeAttribute"
-                                        label="%tree.attributes.node.name" icon="#attributes"
-                                        description="Type attributes">
-                                    <items label="%tree.attribute.node.name" path="attribute" property="attributes"
-                                           icon="#attribute"/>
-                                </folder>
-                                <folder type="org.jkiss.dbeaver.ext.yashandb.model.YashanDBDataTypeMethod"
-                                        label="%tree.methods.node.name" icon="#procedures" description="Type methods">
-                                    <items label="%tree.method.node.name" path="method" property="methods"
-                                           icon="#procedure"/>
-                                </folder>
-                            </items>
-                        </folder>
-                        <folder type="org.jkiss.dbeaver.ext.yashandb.model.YashanDBPackage"
-                                label="%tree.packages.node.name"
-                                icon="#packages" description="Packages">
-                            <items label="%tree.package.node.name" path="package" property="packages" icon="#package">
-                                <items label="%tree.procedures.node.name" itemLabel="%tree.procedure.node.name"
-                                       path="procedure" property="proceduresOnly" icon="#procedure">
-                                    <handler action="open"
-                                             command="org.jkiss.dbeaver.ext.yashandb.code.package.navigate"/>
-                                    <items label="%tree.arguments.node.name" itemLabel="%tree.argument.node.name"
-                                           path="argument" property="parameters" icon="#argument" navigable="false"
-                                           inline="false">
-                                        <items label="%tree.attributes.node.name" itemLabel="%tree.attribute.node.name"
-                                               path="attribute" property="attributes" icon="#attribute"
-                                               navigable="false" inline="true" id="ProcedureArgumentAttributes"
-                                               visibleIf="object.hasAttributes()">
-                                            <items ref="ProcedureArgumentAttributes"/>
-                                        </items>
-                                    </items>
-                                    <folder type="org.jkiss.dbeaver.ext.yashandb.model.YashanDBDependency"
-                                            label="%tree.dependencies.node.name"
-                                            description="Procedure dependency/dependent objects">
-                                        <items label="%tree.dependency.node.name" path="dependency"
-                                               property="dependencies"
-                                               icon="platform:/plugin/org.jkiss.dbeaver.ui/icons/file/link.png">
-                                            <items label="%tree.dependencies.node.name" path="entry" property="entries"
-                                                   navigable="false" inline="true">
-                                            </items>
-                                        </items>
-                                    </folder>
-                                </items>
-                                <items label="%tree.functions.node.name" itemLabel="%tree.function.node.name"
-                                       path="function" property="functionsOnly" icon="#function">
-                                    <handler action="open"
-                                             command="org.jkiss.dbeaver.ext.yashandb.code.package.navigate"/>
-                                    <items label="%tree.arguments.node.name" itemLabel="%tree.argument.node.name"
-                                           path="argument" property="parameters" icon="#argument" navigable="false"
-                                           inline="false">
-                                        <items label="%tree.attributes.node.name" itemLabel="%tree.attribute.node.name"
-                                               path="attribute" property="attributes" icon="#attribute"
-                                               navigable="false" inline="true" id="ProcedureArgumentAttributes"
-                                               visibleIf="object.hasAttributes()">
-                                            <items ref="ProcedureArgumentAttributes"/>
-                                        </items>
-                                    </items>
-                                    <folder type="org.jkiss.dbeaver.ext.yashandb.model.YashanDBDependency"
-                                            label="%tree.dependencies.node.name"
-                                            description="Procedure dependency/dependent objects">
-                                        <items label="%tree.dependency.node.name" path="dependency"
-                                               property="dependencies"
-                                               icon="platform:/plugin/org.jkiss.dbeaver.ui/icons/file/link.png">
-                                            <items label="%tree.dependencies.node.name" path="entry" property="entries"
-                                                   navigable="false" inline="true">
-                                            </items>
-                                        </items>
-                                    </folder>
-                                </items>
-                                <folder type="org.jkiss.dbeaver.ext.yashandb.model.YashanDBDependency"
-                                        label="%tree.dependencies.node.name"
-                                        description="Table dependency/dependent objects">
-                                    <items label="%tree.dependency.node.name" path="dependency" property="dependencies"
-                                           icon="platform:/plugin/org.jkiss.dbeaver.ui/icons/file/link.png">
-                                        <items label="%tree.dependencies.node.name" path="entry" property="entries"
-                                               navigable="false" inline="true">
-                                        </items>
-                                    </items>
-                                </folder>
-                            </items>
-                        </folder>
-                        <folder id="tableTrigger" type="org.jkiss.dbeaver.ext.yashandb.model.YashanDBTableTrigger"
-                                label="%tree.tableTriggers.node.name" icon="#triggers"
-                                description="Table Triggers">
-                            <items label="%tree.trigger.node.name" path="tableTrigger" property="tableTriggers"
-                                   icon="#trigger"/>
-                        </folder>
-                        <folder type="org.jkiss.dbeaver.ext.yashandb.model.YashanDBDataType" label="%tree.dataTypes.node.name"
-                                icon="#data_types" description="Data Types">
-                            <items label="%tree.dataType.node.name" path="dataType" property="dataTypes"
-                                   icon="#data_type"/>
-                        </folder>
-                        <folder type="org.jkiss.dbeaver.ext.yashandb.model.YashanDBSynonym"
-                                label="%tree.synonyms.node.name"
-                                icon="#synonyms" description="Synonyms">
-                            <items label="%tree.synonym.node.name" path="synonym" property="synonyms" icon="#synonym"/>
-                        </folder>
-                        <folder type="org.jkiss.dbeaver.ext.yashandb.model.YashanDBDBLink" label="%tree.database.links.node.name"
-                                icon="#folder_link" description="Database Links (DBLinks)">
-                            <items label="%tree.database.link.node.name" path="databaseLink" property="databaseLinks" icon="#link"/>
-                        </folder>
-                        <folder type="org.jkiss.dbeaver.ext.yashandb.model.YashanDBJob"
-                                label="%tree.jobs.node.name" icon="#scheduler_job_folder" description="Jobs">
-                            <items label="%tree.job.node.name" path="job" property="jobs" icon="platform:/plugin/org.jkiss.dbeaver.model/icons/tree/job_schedule.svg"/>
-                        </folder>
-                         <folder label="%tree.scheduler.node.name" icon="#scheduler_folder" id="schedulerFolder"
-                                description="Scheduler objects">
-                            <folder type="org.jkiss.dbeaver.ext.yashandb.model.YashanDBSchedulerJob" label="%tree.scheduler.jobs.node.name" icon="#scheduler_job_folder" description="Scheduler jobs">
-                                <items label="%tree.scheduler.job.node.name" path="schedulerJob" property="schedulerJobs" icon="platform:/plugin/org.jkiss.dbeaver.model/icons/tree/job_schedule.svg"/>
-                            </folder>
-                        </folder>
-                        <folder type="org.jkiss.dbeaver.ext.yashandb.model.YashanDBRecycledObject" label="%tree.recycle.bin.node.name" icon="#recycle_bin" description="Recycle Bin">
-                            <items label="%tree.recycled.object.node.name" path="object" property="recycledObjects" icon="#recycle_bin"/>
-                        </folder>
-                    </items>
-                </folder>
-                <folder id="globalMetadata" label="%tree.global_metadata.node.name" icon="#logical" description="Global metadata objects">
-                    <folder type="org.jkiss.dbeaver.ext.yashandb.model.YashanDBDataType" label="%tree.dataTypes.node.name"
-                            icon="#data_types" description="Types">
-                        <items label="%tree.dataType.node.name" path="type" property="localDataTypes"
-                               icon="#data_type"/>
-                    </folder>
-                    <folder type="org.jkiss.dbeaver.ext.yashandb.model.YashanDBSynonym"
-                            label="%tree.public_synonyms.node.name"
-                            icon="#synonyms" description="Public synonyms">
-                        <items label="%tree.synonym.node.name" path="synonym" property="publicSynonyms"
-                               icon="#synonym"/>
-                    </folder>
-                    <folder type="org.jkiss.dbeaver.ext.yashandb.model.YashanDBDBLink" label="%tree.public.database.links.node.name"
-                            icon="#links" description="Public database links">
-                        <items label="%tree.public.database.link.node.name" path="databaseLink" property="publicDatabaseLinks" icon="#link"/>
-                    </folder>
-                    <folder type="org.jkiss.dbeaver.ext.yashandb.model.YashanDBRecycledObject"
-                            label="%tree.user.recycle.bin.node.name"
-                            icon="#recycle_bin" description="Current user's recycle bin">
-                        <items label="%tree.recycled.object.node.name" path="object"
-                               property="userRecycledObjects" icon="#recycle_bin"/>
-                    </folder>
-                </folder>
-                <folder id="storage" label="%tree.storage.node.name" icon="#storage" description="Storage management">
-                    <folder type="org.jkiss.dbeaver.ext.yashandb.model.YashanDBTablespace"
-                            label="%tree.tablespaces.node.name"
-                            icon="#tablespaces" description="Tablespaces">
-                        <items label="%tree.tablespace.node.name" path="tablespace" property="tablespaces"
-                               icon="#tablespace">
-                            <folder type="org.jkiss.dbeaver.ext.yashandb.model.YashanDBDataFile"
-                                    label="%tree.files.node.name" icon="#files" description="Data Files">
-                                <items label="%tree.file.node.name" path="file" property="files" icon="#file"/>
-                            </folder>
-                            <folder type="org.jkiss.dbeaver.ext.yashandb.model.YashanDBSegment"
-                                    label="%tree.objects.node.name" icon="#segments" description="Objects (segments)">
-                                <items label="%tree.segments.node.name" path="segment" property="segments"
-                                       icon="#segment"/>
-                            </folder>
-                        </items>
-                    </folder>
-                </folder>
-                <folder id="security" label="%tree.security.node.name" icon="#security"
-                        description="Security management">
-                    <folder type="org.jkiss.dbeaver.ext.yashandb.model.YashanDBUser" label="%tree.users.node.name"
-                            icon="#folder_user" description="Users">
-                        <items label="%tree.user.node.name" path="users" property="users" icon="#user">
-                        	<folder type="org.jkiss.dbeaver.ext.yashandb.model.YashanDBPrivRole" label="%tree.roles.node.name" icon="#folder_role" description="User roles" navigable="false">
-                                <items label="%tree.role.node.name" path="roles" property="rolePrivs" icon="#user_group"/>
-                            </folder>
-                            <folder type="org.jkiss.dbeaver.ext.yashandb.model.YashanDBPrivSystem" label="%tree.privileges.node.name" icon="#permissions" description="System Privileges" navigable="false">
-                                <items label="%tree.privilege.node.name" path="sysPrivs" property="systemPrivs" icon="#privilege"/>
-                            </folder>
-                            <folder type="org.jkiss.dbeaver.ext.yashandb.model.YashanDBPrivObject" label="%tree.objects.node.name" icon="#permissions" description="Objects" navigable="false">
-                                <items label="%tree.privilege.node.name" path="objectPriv" property="objectPrivs" icon="#privilege"/>
-                            </folder>
-                        </items>
-                    </folder>
-                    <folder type="org.jkiss.dbeaver.ext.yashandb.model.YashanDBRole" label="%tree.roles.node.name"
-                            icon="#folder_role" description="Roles">
-                         <items label="%tree.role.node.name" path="roles" property="roles" icon="#user_group">
-                            <folder type="org.jkiss.dbeaver.ext.yashandb.model.YashanDBPrivUser" label="%tree.users.node.name" icon="#folder_user" description="Users" navigable="false">
-                                <items label="%tree.user.node.name" path="userPrivs" property="userPrivs" icon="#user">
-                                </items>
-                            </folder>
-                            <folder type="org.jkiss.dbeaver.ext.yashandb.model.YashanDBPrivRole" label="%tree.roles.node.name" icon="#folder_role" description="Roles" navigable="false">
-                                <items label="%tree.role.node.name" path="roles" property="rolePrivs" icon="#user_group">
-                                </items>
-                            </folder>
-                            <folder type="org.jkiss.dbeaver.ext.yashandb.model.YashanDBPrivSystem" label="%tree.privileges.node.name" icon="#permissions" description="System Privileges" navigable="false">
-                                <items label="%tree.privilege.node.name" path="sysPrivs" property="systemPrivs" icon="#privilege">
-                                </items>
-                            </folder>
-                            <folder type="org.jkiss.dbeaver.ext.yashandb.model.YashanDBPrivObject" label="%tree.objects.node.name" icon="#permissions" description="Objects" navigable="false">
-                                <items label="%tree.privilege.node.name" path="objectPriv" property="objectPrivs" icon="#privilege">
-                                </items>
-                            </folder>
-                        </items>
-                    </folder>
-                    <folder type="org.jkiss.dbeaver.ext.yashandb.model.YashanDBUserProfile" label="%tree.profiles.node.name"
-                            icon="#folder_profile" description="User profiles">
-                        <items label="%tree.profile.node.name" path="profiles" property="profiles" icon="#profile">
-                            <items label="%tree.resource.node.name" path="resource" property="resources" icon="#resource"/>
-                        </items>
-                    </folder>
-                </folder>
-                <folder label="%tree.administer.node.name" icon="#folder_admin" description="Maintenance/Settings">
-                    <treeContribution category="connectionEditor"/>
-                </folder>
-            </tree>
         </datasource>
     </extension>
     
-   <extension point="org.jkiss.dbeaver.objectManager">
+    <extension point="org.jkiss.dbeaver.objectManager">
         <manager class="org.jkiss.dbeaver.ext.yashandb.edit.YashanDBTableManager"
                  objectType="org.jkiss.dbeaver.ext.yashandb.model.YashanDBTable"/>
-        <manager class="org.jkiss.dbeaver.ext.yashandb.edit.YashanDBViewManager"
-                 objectType="org.jkiss.dbeaver.ext.yashandb.model.YashanDBView"/>
-        <manager class="org.jkiss.dbeaver.ext.yashandb.edit.YashanDBConstraintManager"
-                 objectType="org.jkiss.dbeaver.ext.yashandb.model.YashanDBTableConstraint"/>
-        <manager class="org.jkiss.dbeaver.ext.yashandb.edit.YashanDBIndexManager"
-                 objectType="org.jkiss.dbeaver.ext.yashandb.model.YashanDBTableIndex"/>
-        <manager class="org.jkiss.dbeaver.ext.yashandb.edit.YashanDBDataTypeManager"
-                 objectType="org.jkiss.dbeaver.ext.yashandb.model.YashanDBDataType"/>
         <manager class="org.jkiss.dbeaver.ext.yashandb.edit.YashanDBTableColumnManager"
                  objectType="org.jkiss.dbeaver.ext.yashandb.model.YashanDBTableColumn"/>
-        <manager class="org.jkiss.dbeaver.ext.yashandb.edit.YashanDBForeignKeyManager"
-                 objectType="org.jkiss.dbeaver.ext.yashandb.model.YashanDBTableForeignKey"/>
-        <manager class="org.jkiss.dbeaver.ext.yashandb.edit.YashanDBTableTriggerManager"
-                 objectType="org.jkiss.dbeaver.ext.yashandb.model.YashanDBTableTrigger"/>
-        <manager class="org.jkiss.dbeaver.ext.yashandb.edit.YashanDBSequenceManager"
-                 objectType="org.jkiss.dbeaver.ext.yashandb.model.YashanDBSequence"/>
-        <manager class="org.jkiss.dbeaver.ext.yashandb.edit.YashanDBSchemaManager"
+     	<manager class="org.jkiss.dbeaver.ext.yashandb.edit.YashanDBSchemaManager"
                  objectType="org.jkiss.dbeaver.ext.yashandb.model.YashanDBSchema"/>
-        <manager class="org.jkiss.dbeaver.ext.yashandb.edit.YashanDBProcedureManager"
-                 objectType="org.jkiss.dbeaver.ext.yashandb.model.YashanDBProcedureStandalone"/>
-        <manager class="org.jkiss.dbeaver.ext.yashandb.edit.YashanDBPackageManager"
+        <manager class="org.jkiss.dbeaver.ext.yashandb.edit.YashanDBDataTypeManager"
+                 objectType="org.jkiss.dbeaver.ext.yashandb.model.YashanDBDataType"/>
+    	<manager class="org.jkiss.dbeaver.ext.yashandb.edit.YashanDBPackageManager"
                  objectType="org.jkiss.dbeaver.ext.yashandb.model.YashanDBPackage"/>
-        <manager class="org.jkiss.dbeaver.ext.yashandb.edit.YashanDBMaterializedViewManager"
-                 objectType="org.jkiss.dbeaver.ext.yashandb.model.YashanDBMaterializedView"/>
+        <manager class="org.jkiss.dbeaver.ext.yashandb.edit.YashanDBProcedureManager"
+                 objectType="org.jkiss.dbeaver.ext.yashandb.model.YashanDBProcedureStandalone"/>    
+		<manager class="org.jkiss.dbeaver.ext.yashandb.edit.YashanDBTableTriggerManager"
+                 objectType="org.jkiss.dbeaver.ext.yashandb.model.YashanDBTableTrigger"/>
+		<manager class="org.jkiss.dbeaver.ext.yashandb.edit.YashanDBViewManager"
+                 objectType="org.jkiss.dbeaver.ext.yashandb.model.YashanDBView"/>
+		<manager class="org.jkiss.dbeaver.ext.yashandb.edit.YashanDBMaterializedViewManager"
+                 objectType="org.jkiss.dbeaver.ext.yashandb.model.YashanDBMaterializedView"/>                 
     </extension>
 </plugin>

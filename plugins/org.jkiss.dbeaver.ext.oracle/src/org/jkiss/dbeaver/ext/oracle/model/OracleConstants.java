@@ -1,6 +1,6 @@
 /*
  * DBeaver - Universal Database Manager
- * Copyright (C) 2010-2025 DBeaver Corp and others
+ * Copyright (C) 2010-2026 DBeaver Corp and others
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -134,6 +134,7 @@ public class OracleConstants {
     public static final String TYPE_NAME_ROWID = "ROWID";
     public static final String TYPE_NAME_VARCHAR2 = "VARCHAR2";
     public static final String TYPE_CLOB = "CLOB";
+    public static final String TYPE_NCLOB = "NCLOB";
     public static final String TYPE_NAME_TIMESTAMP = "TIMESTAMP";
     public static final String TYPE_NUMBER = "NUMBER";
     public static final String TYPE_DECIMAL = "DECIMAL";
@@ -173,7 +174,7 @@ public class OracleConstants {
     static final String COLUMN_CREATED = "CREATED";
     static final String COLUMN_LAST_DDL_TIME = "LAST_DDL_TIME";
     static final String COLUMN_OBJECT_NAME = "OBJECT_NAME";
-    static final String COLUMN_OBJECT_TYPE = "OBJECT_TYPE";
+    public static final String COLUMN_OBJECT_TYPE = "OBJECT_TYPE";
     public static final String COLUMN_STATUS = "STATUS";
     static final String RESULT_STATUS_VALID = "VALID";
     static final String RESULT_YES_VALUE = "Y";

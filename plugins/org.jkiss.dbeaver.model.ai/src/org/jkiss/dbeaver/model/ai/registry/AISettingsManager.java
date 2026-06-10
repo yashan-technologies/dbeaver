@@ -23,6 +23,7 @@ import org.jkiss.dbeaver.DBException;
 import org.jkiss.dbeaver.Log;
 import org.jkiss.dbeaver.model.WorkspaceConfigEventManager;
 import org.jkiss.dbeaver.model.ai.AISettings;
+import org.jkiss.dbeaver.model.ai.engine.AICredentialsProvider;
 import org.jkiss.dbeaver.model.ai.engine.AIEngineProperties;
 import org.jkiss.dbeaver.model.ai.engine.openai.OpenAIConstants;
 import org.jkiss.dbeaver.model.app.DBPApplication;
@@ -33,7 +34,9 @@ import org.jkiss.dbeaver.utils.PropertySerializationUtils;
 import org.jkiss.utils.CommonUtils;
 
 import java.io.StringReader;
+import java.lang.reflect.Type;
 import java.util.*;
+import java.util.function.Consumer;
 
 public class AISettingsManager {
     private static final Log log = Log.getLog(AISettingsManager.class);
@@ -44,9 +47,7 @@ public class AISettingsManager {
     private static final String ACTIVE_ENGINE_KEY = "activeEngine";
     private static final String PROPERTIES_KEY = "properties";
     private static final String ENGINE_CONFIGURATIONS_KEY = "engineConfigurations";
-    private static final String FUNCTIONS_ENABLED_KEY = "functionsEnabled";
-    private static final String ENABLED_FUNCTION_CATEGORIES_KEY = "enabledFunctionCategories";
-    private static final String ENABLED_FUNCTIONS_KEY = "enabledFunctions";
+    private static final String CUSTOM_INSTRUCTIONS_KEY = "customInstructions";
     public static final String ENGINE_PROPERTIES = "properties";
 
     private static AISettingsManager instance = null;
@@ -86,6 +87,7 @@ public class AISettingsManager {
         }
     }
 
+    @NotNull
     private AISettingsHolder getSettingsHolder() {
         return AISettingsLocalHolder.INSTANCE;
     }
@@ -120,16 +122,11 @@ public class AISettingsManager {
                 settings.setActiveEngine(JSONUtils.getString(configMap, ACTIVE_ENGINE_KEY));
                 JSONUtils.getObject(configMap, PROPERTIES_KEY).forEach(settings::setProperty);
 
-                List<String> enabledCategories = JSONUtils.getStringList(configMap, ENABLED_FUNCTION_CATEGORIES_KEY);
-                if (!enabledCategories.isEmpty()) {
-                    settings.setEnabledFunctionCategories(new HashSet<>(enabledCategories));
+                @SuppressWarnings("unchecked")
+                Map<String, String> customInstructions = (Map<String, String>) configMap.get(CUSTOM_INSTRUCTIONS_KEY);
+                if (!CommonUtils.isEmpty(customInstructions)) {
+                    settings.setCustomInstructions(customInstructions);
                 }
-                settings.setFunctionsEnabled(JSONUtils.getBoolean(configMap, FUNCTIONS_ENABLED_KEY, true));
-                List<String> enabledFunctions = JSONUtils.getStringList(configMap, ENABLED_FUNCTIONS_KEY);
-                if (!enabledFunctions.isEmpty()) {
-                    settings.setEnabledFunctions(new HashSet<>(enabledFunctions));
-                }
-
 
                 Map<String, Object> ecRoot = JSONUtils.getObject(configMap, ENGINE_CONFIGURATIONS_KEY);
 
@@ -154,32 +151,24 @@ public class AISettingsManager {
                     }
                 }
             }
-
-            if (settings.getEnabledFunctionCategories().isEmpty()) {
-                settings.setEnabledFunctionCategories(
-                    AIFunctionRegistry.getInstance().getDefaultEnabledCategoryIds()
-                );
-            }
-
             settings.setEngineConfigurations(engineConfigurationMap);
         }
         if (settings.activeEngine() == null || !settings.hasConfiguration(settings.activeEngine())) {
             settings.setActiveEngine(OpenAIConstants.OPENAI_ENGINE);
         }
 
-        // Fill missing settings
-        Map<String, AIEngineProperties> configurations = settings.getEngineConfigurations();
-        for (AIEngineDescriptor aed : AIEngineRegistry.getInstance().getCompletionEngines()) {
-            if (!configurations.containsKey(aed.getId())) {
-                try {
-                    configurations.put(aed.getId(), aed.createPropertiesInstance());
-                } catch (DBException e) {
-                    log.error(e);
-                }
-            }
-        }
-
         return settings;
+    }
+
+    /**
+     * Modify settings with given consumer and save them.
+     *
+     * @param consumer consumer to modify settings
+     */
+    public void modifySettings(@NotNull Consumer<AISettings> consumer) {
+        AISettings settings = this.getSettings();
+        consumer.accept(settings);
+        this.saveSettings(settings);
     }
 
     public void saveSettings(@NotNull AISettings settings) {
@@ -200,25 +189,15 @@ public class AISettingsManager {
             }
             json.add(PROPERTIES_KEY, propertiesObject);
 
-            json.add(FUNCTIONS_ENABLED_KEY, new JsonPrimitive(settings.isFunctionsEnabled()));
-            Set<String> enabledCategories = settings.getEnabledFunctionCategories();
-            if (!enabledCategories.isEmpty()) {
-                JsonArray categoriesArray = new JsonArray();
-                for (String category : enabledCategories) {
-                    categoriesArray.add(category);
-                }
-                json.add(ENABLED_FUNCTION_CATEGORIES_KEY, categoriesArray);
-            }
+            Map<String, String> customInstructions = settings.getCustomInstructions();
+            if (!customInstructions.isEmpty()) {
+                JsonObject object = new JsonObject();
 
-            Set<String> enabledFunctions = settings.getEnabledFunctions();
-            if (!enabledFunctions.isEmpty()) {
-                JsonArray functionsArray = new JsonArray();
-                for (String function : enabledFunctions) {
-                    functionsArray.add(function);
+                for (Map.Entry<String, String> entry : customInstructions.entrySet()) {
+                    object.addProperty(entry.getKey(), entry.getValue());
                 }
-                json.add(ENABLED_FUNCTIONS_KEY, functionsArray);
+                json.add(CUSTOM_INSTRUCTIONS_KEY, object);
             }
-
 
             JsonObject engineConfigurations = new JsonObject();
             for (Map.Entry<String, AIEngineProperties> configuration : settings.getEngineConfigurations().entrySet()) {
@@ -269,6 +248,7 @@ public class AISettingsManager {
     private static Gson createPropertiesLoadGson() {
         return new GsonBuilder()
             .setStrictness(Strictness.LENIENT)
+            .registerTypeAdapter(AICredentialsProvider.class, new DBAAuthProviderAdapter())
             .create();
     }
 
@@ -277,7 +257,8 @@ public class AISettingsManager {
         if (saveSecretsAsPlainText()) {
             return createPropertiesLoadGson();
         } else {
-            return PropertySerializationUtils.baseNonSecurePropertiesGsonBuilder().create();
+            return PropertySerializationUtils.baseNonSecurePropertiesGsonBuilder()
+                .registerTypeAdapter(AICredentialsProvider.class, new DBAAuthProviderAdapter()).create();
         }
     }
 
@@ -320,6 +301,41 @@ public class AISettingsManager {
         @Override
         public synchronized void reset() {
             this.settings = null;
+        }
+    }
+
+    static class DBAAuthProviderAdapter implements JsonDeserializer<AICredentialsProvider<?>>, JsonSerializer<AICredentialsProvider<?>> {
+
+        @Override
+        public AICredentialsProvider<?> deserialize(
+            @NotNull JsonElement json,
+            @NotNull Type typeOfT,
+            @NotNull JsonDeserializationContext context
+        ) {
+            JsonObject obj = json.getAsJsonObject();
+            String type = obj.get("type").getAsString(); //NON-NLS-1
+            DBACredentialsProviderDescriptor authProviderByID = AICredentialsProviderRegistry.getInstance()
+                .getCredentialsProviderByID(type);
+            if (authProviderByID == null) {
+                log.error("Auth provider '" + type + "' not found");
+                return null;
+            }
+            Class<?> providerClass = authProviderByID.getProviderClass();
+            return context.deserialize(obj.getAsJsonObject("data"), providerClass); //NON-NLS-1
+        }
+
+
+        @Override
+        public JsonElement serialize(
+            @NotNull AICredentialsProvider src,
+            @NotNull Type typeOfSrc,
+            @NotNull JsonSerializationContext context
+        ) {
+
+            JsonObject obj = new JsonObject();
+            obj.add("data", context.serialize(src, src.getClass())); //NON-NLS-1
+            obj.addProperty("type", src.getProviderId()); //NON-NLS-1
+            return obj;
         }
     }
 }

@@ -17,20 +17,38 @@
 package org.jkiss.dbeaver.model.ai.engine.copilot.dto;
 
 import com.google.gson.annotations.SerializedName;
+import org.jkiss.code.Nullable;
 
 public record CopilotUsage(
     @SerializedName("prompt_tokens")
     int promptTokens,
+
+    @Nullable
     @SerializedName("prompt_tokens_details")
     PromptTokensDetails promptTokensDetails,
+
     @SerializedName("completion_tokens")
     int completionTokens,
+
+    @Nullable
+    @SerializedName("completion_tokens_details")
+    CompletionTokensDetails completionTokensDetails,
+
     @SerializedName("total_tokens")
-    int totalTokens
+    int totalTokens,
+
+    @SerializedName("reasoning_tokens")
+    int reasoningTokens
 ) {
 
     public record PromptTokensDetails(
         @SerializedName("cached_tokens") int cachedTokens
+    ) {
+    }
+
+    public record CompletionTokensDetails(
+        @SerializedName("accepted_prediction_tokens") int acceptedPredictionTokens,
+        @SerializedName("rejected_prediction_tokens") int rejectedPredictionTokens
     ) {
     }
 }
