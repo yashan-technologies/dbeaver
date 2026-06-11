@@ -13,6 +13,8 @@ jobs:
     name: Build Release
     runs-on: ubuntu-latest
     timeout-minutes: 90
+    env:
+      RELEASE_PACKAGE_DIR: dbeaver/product/community/target/release-packages
     steps:
       - name: Checkout dbeaver
         uses: actions/checkout@v4
@@ -31,17 +33,36 @@ jobs:
         with:
           java-version: '21'
           distribution: 'temurin'
+          cache: maven
+
+      - name: Resolve release version
+        run: |
+          VERSION="${GITHUB_REF_NAME#v}"
+          echo "RELEASE_VERSION=$VERSION" >> "$GITHUB_ENV"
+          echo "MAVEN_ARGS=--batch-mode --no-transfer-progress -DskipTests -Ddbeaver-version=$VERSION" >> "$GITHUB_ENV"
 
       - name: Build release packages
         run: |
-          VERSION="${{ github.ref_name }}"
-          echo "MAVEN_ARGS=--batch-mode --no-transfer-progress -Ddbeaver-version=${VERSION#v}" >> "$GITHUB_ENV"
           ./dbeaver/tools/build.sh
+
+      - name: Verify release packages
+        run: |
+          set -euo pipefail
+
+          expected_count=6
+          actual_count="$(find "$RELEASE_PACKAGE_DIR" -maxdepth 1 -type f \( -name '*.zip' -o -name '*.tar.gz' \) | wc -l)"
+
+          if [ "$actual_count" -ne "$expected_count" ]; then
+            echo "Expected $expected_count release packages, found $actual_count"
+            find "$RELEASE_PACKAGE_DIR" -maxdepth 1 -type f -print
+            exit 1
+          fi
 
       - name: Upload artifacts to GitHub Release
         uses: softprops/action-gh-release@v2
         with:
           files: |
-            dbeaver/product/community/target/products/*.tar.gz
+            dbeaver/product/community/target/release-packages/*.zip
+            dbeaver/product/community/target/release-packages/*.tar.gz
           generate_release_notes: true
           fail_on_unmatched_files: true
