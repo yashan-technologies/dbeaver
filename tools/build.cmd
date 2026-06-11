@@ -28,7 +28,7 @@ if not exist "%dbeaverCommonDir%" (
 )
 
 echo Starting Maven build...
-call "%dbeaverCommonDir%\mvnw.cmd" %MAVEN_ARGS% clean install -Pproduct-dbeaver-ce,product-dbeaver-eclipse-ce,appstore -T 1C -f "%aggregateDir%"
+call "%dbeaverCommonDir%\mvnw.cmd" %MAVEN_ARGS% clean install -Pproduct-dbeaver-ce,product-dbeaver-eclipse-ce -T 1C -f "%aggregateDir%"
 if errorlevel 1 exit /b 1
 
 echo Build completed successfully

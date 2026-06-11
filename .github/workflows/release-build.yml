@@ -39,7 +39,7 @@ jobs:
         run: |
           VERSION="${GITHUB_REF_NAME#v}"
           echo "RELEASE_VERSION=$VERSION" >> "$GITHUB_ENV"
-          echo "MAVEN_ARGS=--batch-mode --no-transfer-progress -DskipTests -Ddbeaver-version=$VERSION" >> "$GITHUB_ENV"
+          echo "MAVEN_ARGS=--batch-mode --no-transfer-progress -DskipTests" >> "$GITHUB_ENV"
 
       - name: Build release packages
         run: |

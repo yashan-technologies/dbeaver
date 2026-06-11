@@ -122,7 +122,7 @@ fi
 # Execute Maven build
 log "Starting Maven build..."
 
-"$DBEAVER_COMMON_DIR/mvnw" ${MAVEN_ARGS:-} clean install -Pproduct-dbeaver-ce,product-dbeaver-eclipse-ce,appstore -T 1C -f "$AGGREGATE_DIR"
+"$DBEAVER_COMMON_DIR/mvnw" ${MAVEN_ARGS:-} clean install -Pproduct-dbeaver-ce,product-dbeaver-eclipse-ce -T 1C -f "$AGGREGATE_DIR"
 
 log "Build completed successfully"
 
